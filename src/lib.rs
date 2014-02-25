@@ -9,6 +9,7 @@ extern crate collections;
 
 use std::fmt::Show;
 use std::from_str::FromStr;
+use std::io::BufReader;
 use collections::hashmap::HashMap;
 
 #[deriving(Eq, TotalEq)]
@@ -22,54 +23,52 @@ pub struct Template<'a> {
 	priv tokens: ~[Token]
 }
 
-impl<'a> FromStr for Template<'a> {
-	fn from_str(s: &str) -> Option<Template> {
+impl<'a> Template<'a> {
+	pub fn from_buffer(b: &mut Buffer) -> Template {
 		let mut tokens = ~[];
 		let mut current_token = ~"";
 		let mut is_placeholder = false;
 
-		let mut chars = s.chars();
-
 		loop {
-			match chars.next() {
-				Some('[') => {
+			match b.read_char() {
+				Ok('[') => {
 					if !is_placeholder {
-						match chars.next() {
-							Some('[') => {
+						match b.read_char() {
+							Ok('[') => {
 								tokens.push(String(current_token));
 								current_token = ~"";
 								is_placeholder = true;
 							},
-							Some(c) => {
+							Ok(c) => {
 								current_token.push_char('[');
 								current_token.push_char(c);
 							},
-							None => current_token.push_char('[')
+							Err(_) => current_token.push_char('[')
 						}
 					} else {
 						current_token.push_char('[')
 					}
 				},
-				Some(']') => {
+				Ok(']') => {
 					if is_placeholder {
-						match chars.next() {
-							Some(']') => {
+						match b.read_char() {
+							Ok(']') => {
 								tokens.push(Placeholder(current_token));
 								current_token = ~"";
 								is_placeholder = false;
 							},
-							Some(c) => {
+							Ok(c) => {
 								current_token.push_char(']');
 								current_token.push_char(c);
 							},
-							None => current_token.push_char(']')
+							Err(_) => current_token.push_char(']')
 						}
 					} else {
 						current_token.push_char(']')
 					}
 				},
-				Some(c) => current_token.push_char(c),
-				None => break
+				Ok(c) => current_token.push_char(c),
+				Err(_) => break
 			}
 		}
 
@@ -79,10 +78,16 @@ impl<'a> FromStr for Template<'a> {
 			tokens.push(String(current_token));
 		}
 
-		Some(Template {
+		Template {
 			content: ~HashMap::new(),
 			tokens: tokens
-		})
+		}
+	}
+}
+
+impl<'a> FromStr for Template<'a> {
+	fn from_str(s: &str) -> Option<Template> {
+		Some(Template::from_buffer(&mut BufReader::new(s.as_bytes())))
 	}
 }
 
