@@ -7,7 +7,7 @@
 
 extern crate collections;
 
-use std::fmt::Show;
+use std::fmt;
 use std::from_str::FromStr;
 use std::io::BufReader;
 use collections::hashmap::HashMap;
@@ -18,12 +18,12 @@ enum Token {
 	Placeholder(~str)
 }
 
-pub struct Template<'a> {
-	content: ~HashMap<~str, &'a Show>,
+pub struct Template {
+	content: ~HashMap<~str, ~fmt::Show>,
 	priv tokens: ~[Token]
 }
 
-impl<'a> Template<'a> {
+impl Template {
 	pub fn from_buffer(b: &mut Buffer) -> Template {
 		let mut tokens = ~[];
 		let mut current_token = ~"";
@@ -91,14 +91,41 @@ impl<'a> Template<'a> {
 			tokens: tokens
 		}
 	}
+
+	pub fn insert<T: fmt::Show + Send>(&mut self, placeholder: ~str, item: ~T) {
+		self.content.insert(placeholder, item as ~fmt::Show);
+	}
 }
 
-impl<'a> FromStr for Template<'a> {
+impl FromStr for Template {
 	fn from_str(s: &str) -> Option<Template> {
 		Some(Template::from_buffer(&mut BufReader::new(s.as_bytes())))
 	}
 }
 
+impl fmt::Show for Template {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		for token in self.tokens.iter() {
+			let res = match token {
+				&String(ref s) => f.buf.write_str(*s),
+
+				&Placeholder(ref k) => {
+					match self.content.find(k) {
+						Some(value) => value.fmt(f),
+						None => Ok(())
+					}
+				}
+			};
+
+			match res {
+				Err(e) => return Err(e),
+				_ => {}
+			}
+		}
+
+		Ok(())
+	}
+}
 
 
 #[cfg(test)]
@@ -131,5 +158,25 @@ mod test {
 		assert_eq!(template.tokens[0], String(~"Hello, "));
 		assert_eq!(template.tokens[1], Placeholder(~"name"));
 		assert_eq!(template.tokens[2], String(~"! Write placeholders like [[this]] and escape them like \\[[this]]"));
+	}
+
+	#[test]
+	fn replacement() {
+		let mut template: Template = from_str("Hello, [[name]]! This is a [[something]] template.").unwrap();
+		template.insert(~"name", ~("Peter"));
+		template.insert(~"something", ~("nice"));
+		assert_eq!(template.to_str(), ~"Hello, Peter! This is a nice template.");
+	}
+
+	#[test]
+	fn templates_in_templates() {
+		let mut template1: Template = from_str("Hello, [[name]]! This is a [[something]] template.").unwrap();
+		let mut template2: ~Template = ~from_str("really [[something]]").unwrap();
+		template1.insert(~"name", ~("Peter"));
+		template2.insert(~"something", ~("nice"));
+
+		template1.insert(~"something", template2);
+
+		assert_eq!(template1.to_str(), ~"Hello, Peter! This is a really nice template.");
 	}
 }
