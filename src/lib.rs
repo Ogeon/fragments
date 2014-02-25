@@ -31,6 +31,14 @@ impl<'a> Template<'a> {
 
 		loop {
 			match b.read_char() {
+				Ok('\\') => {
+					match b.read_char() {
+						Ok(c) => {
+							current_token.push_char(c);
+						},
+						_ => break
+					}
+				},
 				Ok('[') => {
 					if !is_placeholder {
 						match b.read_char() {
@@ -115,5 +123,13 @@ mod test {
 		assert_eq!(template.tokens[2], String(~"]! This is a "));
 		assert_eq!(template.tokens[3], Placeholder(~"[[something"));
 		assert_eq!(template.tokens[4], String(~" template."));
+	}
+
+	#[test]
+	fn escaped_tokens() {
+		let template: Template = from_str("Hello, [[name]]! Write placeholders like \\[[this]] and escape them like \\\\\\[[this]]").unwrap();
+		assert_eq!(template.tokens[0], String(~"Hello, "));
+		assert_eq!(template.tokens[1], Placeholder(~"name"));
+		assert_eq!(template.tokens[2], String(~"! Write placeholders like [[this]] and escape them like \\[[this]]"));
 	}
 }
