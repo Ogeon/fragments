@@ -64,6 +64,15 @@ impl Template {
 		self.content.insert(placeholder, item as ~fmt::Show);
 	}
 
+	///Convenience method for setting a condition.
+	pub fn set(&mut self, condition: ~str, value: bool) {
+		if value {
+			self.conditions.insert(condition);
+		} else {
+			self.conditions.remove(&condition);
+		}
+	}
+
 	fn format_tokens(&self, tokens: &[Token], f: &mut fmt::Formatter) -> fmt::Result {
 		for token in tokens.iter() {
 			let res = match token {
@@ -345,7 +354,7 @@ mod test {
 		let mut template: Template = from_str("Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]").unwrap();
 		template.insert(~"name", ~("Peter"));
 		assert_eq!(template.to_str(), ~"Hello, Peter!");
-		template.conditions.insert(~"condition");
+		template.set(~"condition", true);
 		assert_eq!(template.to_str(), ~"Hello, Peter! The condition is true.");
 	}
 
@@ -354,7 +363,7 @@ mod test {
 		let mut template: Template = from_str("Hello, [[:name]]! The condition is [[?condition]]true[[/condition]][[?!condition]]false[[/condition]].").unwrap();
 		template.insert(~"name", ~("Peter"));
 		assert_eq!(template.to_str(), ~"Hello, Peter! The condition is false.");
-		template.conditions.insert(~"condition");
+		template.set(~"condition", true);
 		assert_eq!(template.to_str(), ~"Hello, Peter! The condition is true.");
 	}
 }
