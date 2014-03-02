@@ -12,7 +12,7 @@ use std::from_str::FromStr;
 use std::io::BufReader;
 use collections::hashmap::HashMap;
 
-#[deriving(Eq, TotalEq)]
+#[deriving(Eq, TotalEq, Show)]
 enum Token {
 	String(~str),
 	Placeholder(~str)
