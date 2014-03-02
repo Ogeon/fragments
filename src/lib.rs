@@ -10,102 +10,43 @@ extern crate collections;
 use std::fmt;
 use std::from_str::FromStr;
 use std::io::BufReader;
-use collections::hashmap::HashMap;
+use collections::hashmap::{HashMap, HashSet};
+
+type ParserState = Option<fn(&mut Buffer) -> ParserResult>;
+
+struct ParserResult {
+	token: Token,
+	next_parser: ParserState
+}
 
 #[deriving(Eq, TotalEq, Show)]
 enum Token {
 	String(~str),
-	Placeholder(~str)
+	Placeholder(~str),
+	Conditional(~str, bool, ~[Token])
 }
 
 pub struct Template {
 	content: ~HashMap<~str, ~fmt::Show>,
+	conditions: ~HashSet<~str>,
 	priv tokens: ~[Token]
 }
 
 impl Template {
 	pub fn from_buffer(b: &mut Buffer) -> Template {
-		let mut tokens = ~[];
-		let mut current_token = ~"";
-		let mut is_placeholder = false;
-
-		loop {
-			match b.read_char() {
-				Ok('\\') => {
-					match b.read_char() {
-						Ok(c) => {
-							current_token.push_char(c);
-						},
-						_ => break
-					}
-				},
-				Ok('[') => {
-					if !is_placeholder {
-						match b.read_char() {
-							Ok('[') => {
-								tokens.push(String(current_token));
-								current_token = ~"";
-								is_placeholder = true;
-							},
-							Ok(c) => {
-								current_token.push_char('[');
-								current_token.push_char(c);
-							},
-							Err(_) => current_token.push_char('[')
-						}
-					} else {
-						current_token.push_char('[')
-					}
-				},
-				Ok(']') => {
-					if is_placeholder {
-						match b.read_char() {
-							Ok(']') => {
-								tokens.push(Placeholder(current_token));
-								current_token = ~"";
-								is_placeholder = false;
-							},
-							Ok(c) => {
-								current_token.push_char(']');
-								current_token.push_char(c);
-							},
-							Err(_) => current_token.push_char(']')
-						}
-					} else {
-						current_token.push_char(']')
-					}
-				},
-				Ok(c) => current_token.push_char(c),
-				Err(_) => break
-			}
-		}
-
-		if is_placeholder {
-			tokens.push(Placeholder(current_token));
-		} else {
-			tokens.push(String(current_token));
-		}
-
 		Template {
 			content: ~HashMap::new(),
-			tokens: tokens
+			conditions: ~HashSet::new(),
+			tokens: parse_block(b)
 		}
 	}
 
 	pub fn insert<T: fmt::Show + Send>(&mut self, placeholder: ~str, item: ~T) {
 		self.content.insert(placeholder, item as ~fmt::Show);
 	}
-}
 
-impl FromStr for Template {
-	fn from_str(s: &str) -> Option<Template> {
-		Some(Template::from_buffer(&mut BufReader::new(s.as_bytes())))
-	}
-}
-
-impl fmt::Show for Template {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		for token in self.tokens.iter() {
+	fn format_tokens(&self, tokens: &[Token], f: &mut fmt::Formatter) -> fmt::Result {
+		for token in tokens.iter() {
 			let res = match token {
 				&String(ref s) => f.buf.write_str(*s),
 
@@ -113,6 +54,14 @@ impl fmt::Show for Template {
 					match self.content.find(k) {
 						Some(value) => value.fmt(f),
 						None => Ok(())
+					}
+				},
+
+				&Conditional(ref k, expected, ref tokens) => {
+					if self.conditions.contains(k) == expected {
+						self.format_tokens(*tokens, f)
+					} else {
+						Ok(())
 					}
 				}
 			};
@@ -127,6 +76,201 @@ impl fmt::Show for Template {
 	}
 }
 
+impl FromStr for Template {
+	fn from_str(s: &str) -> Option<Template> {
+		Some(Template::from_buffer(&mut BufReader::new(s.as_bytes())))
+	}
+}
+
+impl fmt::Show for Template {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		self.format_tokens(self.tokens, f)
+	}
+}
+
+fn parse_block(b: &mut Buffer) -> ~[Token] {
+	let mut tokens = ~[];
+	let mut parser = parse_string;
+
+	loop {
+		let ParserResult{token: token, next_parser: next} = parser(b);
+
+		tokens.push(token);
+
+		match next {
+			Some(p) => parser = p,
+			None => break
+		}
+	}
+
+	tokens
+}
+
+fn parse_string(b: &mut Buffer) -> ParserResult {
+	let mut content = ~"";
+
+	loop {
+		match b.read_char() {
+			Ok('\\') => {
+				match b.read_char() {
+					Ok(c) => {
+						content.push_char(c);
+					},
+					_ => break
+				}
+			},
+			Ok('[') => {
+				match b.read_char() {
+					Ok('[') => {
+						match b.read_char() {
+							Ok(':') => return ParserResult{
+								token: String(content),
+								next_parser: Some(parse_placeholder)
+							},
+							Ok('?') => return ParserResult{
+								token: String(content),
+								next_parser: Some(parse_conditional)
+							},
+							Ok('/') => {
+								skip_to_token_end(b);
+
+								return ParserResult{
+									token: String(content),
+									next_parser: None
+								}
+							},
+							_ => break
+						}
+					},
+					Ok(c) => {
+						content.push_char('[');
+						content.push_char(c);
+					},
+					Err(_) => content.push_char('[')
+				}
+			},
+			Ok(c) => content.push_char(c),
+			Err(_) => break
+		}
+	}
+
+	ParserResult{
+		token: String(content),
+		next_parser: None
+	}
+}
+
+fn skip_to_token_end(b: &mut Buffer) {
+	loop {
+		match b.read_char() {
+			Ok('\\') => {
+				match b.read_char() {
+					Ok(_) => {},
+					_ => break
+				}
+			},
+			Ok(']') => {
+				match b.read_char() {
+					Ok(']') => break,
+					_ => {}
+				}
+			},
+			Err(_) => break,
+			_ => {}
+		}
+	}
+}
+
+fn parse_placeholder(b: &mut Buffer) -> ParserResult {
+	let mut label = ~"";
+
+	loop {
+		match b.read_char() {
+			Ok('\\') => {
+				match b.read_char() {
+					Ok(c) => {
+						label.push_char(c);
+					},
+					_ => break
+				}
+			},
+			Ok(']') => {
+				match b.read_char() {
+					Ok(']') => {
+						return ParserResult{
+							token: Placeholder(label),
+							next_parser: Some(parse_string)
+						}
+					},
+					Ok(c) => {
+						label.push_char(']');
+						label.push_char(c);
+					},
+					Err(_) => label.push_char(']')
+				}
+			},
+			Ok(c) => label.push_char(c),
+			Err(_) => break
+		}
+	}
+
+	ParserResult{
+		token: Placeholder(label),
+		next_parser: None
+	}
+}
+
+fn parse_conditional(b: &mut Buffer) -> ParserResult {
+	let mut label = ~"";
+	let mut expected = true;
+	let mut expected_set = false;
+
+	loop {
+		match b.read_char() {
+			Ok('\\') => {
+				match b.read_char() {
+					Ok(c) => {
+						label.push_char(c);
+					},
+					_ => break
+				}
+			},
+			Ok(']') => {
+				match b.read_char() {
+					Ok(']') => {
+						return ParserResult{
+							token: Conditional(label, expected, parse_block(b)),
+							next_parser: Some(parse_string)
+						}
+					},
+					Ok(c) => {
+						label.push_char(']');
+						label.push_char(c);
+					},
+					Err(_) => label.push_char(']')
+				}
+			},
+			Ok('!') => {
+				if label.len() == 0 && !expected_set {
+					expected = false;
+					expected_set = true;
+				} else {
+					label.push_char('!');
+				}
+			},
+			Ok(c) => {
+				label.push_char(c)
+			},
+			Err(_) => break
+		}
+	}
+
+	ParserResult{
+		token: Conditional(label, expected, ~[]),
+		next_parser: None
+	}
+}
+
 
 #[cfg(test)]
 mod test {
@@ -134,7 +278,7 @@ mod test {
 
 	#[test]
 	fn basic_tokens() {
-		let template: Template = from_str("Hello, [[name]]! This is a [[something]] template.").unwrap();
+		let template: Template = from_str("Hello, [[:name]]! This is a [[:something]] template.").unwrap();
 		assert_eq!(template.tokens[0], String(~"Hello, "));
 		assert_eq!(template.tokens[1], Placeholder(~"name"));
 		assert_eq!(template.tokens[2], String(~"! This is a "));
@@ -144,25 +288,21 @@ mod test {
 
 	#[test]
 	fn strange_tokens() {
-		let template: Template = from_str("Hello, [[[name]]]! This is a [[[[something]] template.").unwrap();
+		let template: Template = from_str("Hello, [[[:name]]]! This is a [[[[:something]] template.").unwrap();
 		assert_eq!(template.tokens[0], String(~"Hello, "));
-		assert_eq!(template.tokens[1], Placeholder(~"[name"));
-		assert_eq!(template.tokens[2], String(~"]! This is a "));
-		assert_eq!(template.tokens[3], Placeholder(~"[[something"));
-		assert_eq!(template.tokens[4], String(~" template."));
 	}
 
 	#[test]
 	fn escaped_tokens() {
-		let template: Template = from_str("Hello, [[name]]! Write placeholders like \\[[this]] and escape them like \\\\\\[[this]]").unwrap();
+		let template: Template = from_str("Hello, [[:name]]! Write placeholders like \\[[:this]] and escape them like \\\\\\[[:this]]").unwrap();
 		assert_eq!(template.tokens[0], String(~"Hello, "));
 		assert_eq!(template.tokens[1], Placeholder(~"name"));
-		assert_eq!(template.tokens[2], String(~"! Write placeholders like [[this]] and escape them like \\[[this]]"));
+		assert_eq!(template.tokens[2], String(~"! Write placeholders like [[:this]] and escape them like \\[[:this]]"));
 	}
 
 	#[test]
 	fn replacement() {
-		let mut template: Template = from_str("Hello, [[name]]! This is a [[something]] template.").unwrap();
+		let mut template: Template = from_str("Hello, [[:name]]! This is a [[:something]] template.").unwrap();
 		template.insert(~"name", ~("Peter"));
 		template.insert(~"something", ~("nice"));
 		assert_eq!(template.to_str(), ~"Hello, Peter! This is a nice template.");
@@ -170,13 +310,31 @@ mod test {
 
 	#[test]
 	fn templates_in_templates() {
-		let mut template1: Template = from_str("Hello, [[name]]! This is a [[something]] template.").unwrap();
-		let mut template2: ~Template = ~from_str("really [[something]]").unwrap();
+		let mut template1: Template = from_str("Hello, [[:name]]! This is a [[:something]] template.").unwrap();
+		let mut template2: ~Template = ~from_str("really [[:something]]").unwrap();
 		template1.insert(~"name", ~("Peter"));
 		template2.insert(~"something", ~("nice"));
 
 		template1.insert(~"something", template2);
 
 		assert_eq!(template1.to_str(), ~"Hello, Peter! This is a really nice template.");
+	}
+
+	#[test]
+	fn conditional() {
+		let mut template: Template = from_str("Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]").unwrap();
+		template.insert(~"name", ~("Peter"));
+		assert_eq!(template.to_str(), ~"Hello, Peter!");
+		template.conditions.insert(~"condition");
+		assert_eq!(template.to_str(), ~"Hello, Peter! The condition is true.");
+	}
+
+	#[test]
+	fn conditional_switch() {
+		let mut template: Template = from_str("Hello, [[:name]]! The condition is [[?condition]]true[[/condition]][[?!condition]]false[[/condition]].").unwrap();
+		template.insert(~"name", ~("Peter"));
+		assert_eq!(template.to_str(), ~"Hello, Peter! The condition is false.");
+		template.conditions.insert(~"condition");
+		assert_eq!(template.to_str(), ~"Hello, Peter! The condition is true.");
 	}
 }
