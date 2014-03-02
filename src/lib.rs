@@ -28,18 +28,18 @@ enum Token {
 
 ///A string template with placeholders and conditional content.
 ///
-///Placehoders are written as `[[:label]]`, where `label` becomes the name of the placeholder.
+///Placeholders are written as `[[:label]]`, where `label` becomes the name of the placeholder.
 ///The label is then used to insert content: `my_template.insert(~"label", my_content);`.
 ///The assigned content for a placeholder can be anything that implements `Show`.
 ///Even other templates may be inserted, which allows a more atomic structure.
 ///
 ///Conditional segments are surrounded by `[[?label]]...[[/]]`, where `label` becomes the name of the condition,
-///and they are used to display content depending on wether its label exists in the `conditions` set.
+///and they are used to display content depending on whether its label exists in the `conditions` set.
 ///`[[/]]` marks the end of a block and may contain other characters after the `/`, which may be useful for labeling the end mark.
 ///Conditions can be made negative by writing `[[?!label]]...[[/]]`, which makes the content visible if the label
 ///is missing from the `conditions` set.
 ///
-///Any character can be escabed by writing `\` before it. It can be used like this: `\[[[:label1]], [[:label2]]]`
+///Any character can be escaped by writing `\` before it. It can be used like this: `\[[[:label1]], [[:label2]]]`
 ///which will result in `[content1, content2]`, since the first `[` will be ignored by the parser and just added to the
 ///rest of the content.
 pub struct Template {
@@ -59,7 +59,7 @@ impl Template {
 		}
 	}
 
-	///Conveience method for inserting content.
+	///Convenience method for inserting content.
 	pub fn insert<T: fmt::Show + Send>(&mut self, placeholder: ~str, item: ~T) {
 		self.content.insert(placeholder, item as ~fmt::Show);
 	}
