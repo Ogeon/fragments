@@ -52,6 +52,7 @@ pub struct Template {
 }
 
 impl Template {
+	#[inline]
 	pub fn from_buffer(b: &mut Buffer) -> Template {
 		Template {
 			content: HashMap::new(),
@@ -61,11 +62,13 @@ impl Template {
 	}
 
 	///Convenience method for inserting content.
+	#[inline]
 	pub fn insert<T: fmt::Show + Send>(&mut self, placeholder: ~str, item: ~T) {
 		self.content.insert(placeholder, item as ~fmt::Show);
 	}
 
 	///Convenience method for setting a condition.
+	#[inline]
 	pub fn set(&mut self, condition: ~str, value: bool) {
 		if value {
 			self.conditions.insert(condition);
