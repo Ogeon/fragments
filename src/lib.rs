@@ -5,6 +5,8 @@
 #[crate_type = "lib"];
 #[crate_type = "rlib"];
 
+#[doc(html_root_url = "http://www.rust-ci.org/Ogeon/fragments/doc/")];
+
 extern crate collections;
 
 use std::fmt;
