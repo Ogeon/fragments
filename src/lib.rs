@@ -10,6 +10,7 @@ extern crate collections;
 use std::fmt;
 use std::from_str::FromStr;
 use std::io::BufReader;
+use std::vec_ng::Vec;
 use collections::hashmap::{HashMap, HashSet};
 
 type ParserState = Option<fn(&mut Buffer) -> ParserResult>;
@@ -23,7 +24,7 @@ struct ParserResult {
 enum Token {
 	String(~str),
 	Placeholder(~str),
-	Conditional(~str, bool, ~[Token])
+	Conditional(~str, bool, Vec<Token>)
 }
 
 ///A string template with placeholders and conditional content.
@@ -47,7 +48,7 @@ pub struct Template {
 	content: ~HashMap<~str, ~fmt::Show>,
 	///Conditional switches
 	conditions: ~HashSet<~str>,
-	priv tokens: ~[Token]
+	priv tokens: Vec<Token>
 }
 
 impl Template {
@@ -73,7 +74,7 @@ impl Template {
 		}
 	}
 
-	fn format_tokens(&self, tokens: &[Token], f: &mut fmt::Formatter) -> fmt::Result {
+	fn format_tokens(&self, tokens: &Vec<Token>, f: &mut fmt::Formatter) -> fmt::Result {
 		for token in tokens.iter() {
 			let res = match token {
 				&String(ref s) => f.buf.write_str(*s),
@@ -87,7 +88,7 @@ impl Template {
 
 				&Conditional(ref k, expected, ref tokens) => {
 					if self.conditions.contains(k) == expected {
-						self.format_tokens(*tokens, f)
+						self.format_tokens(tokens, f)
 					} else {
 						Ok(())
 					}
@@ -113,12 +114,12 @@ impl FromStr for Template {
 
 impl fmt::Show for Template {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		self.format_tokens(self.tokens, f)
+		self.format_tokens(&self.tokens, f)
 	}
 }
 
-fn parse_block(b: &mut Buffer) -> ~[Token] {
-	let mut tokens = ~[];
+fn parse_block(b: &mut Buffer) -> Vec<Token> {
+	let mut tokens = vec!();
 	let mut parser = parse_string;
 
 	loop {
@@ -295,7 +296,7 @@ fn parse_conditional(b: &mut Buffer) -> ParserResult {
 	}
 
 	ParserResult{
-		token: Conditional(label, expected, ~[]),
+		token: Conditional(label, expected, vec!()),
 		next_parser: None
 	}
 }
@@ -308,25 +309,25 @@ mod test {
 	#[test]
 	fn basic_tokens() {
 		let template: Template = from_str("Hello, [[:name]]! This is a [[:something]] template.").unwrap();
-		assert_eq!(template.tokens[0], String(~"Hello, "));
-		assert_eq!(template.tokens[1], Placeholder(~"name"));
-		assert_eq!(template.tokens[2], String(~"! This is a "));
-		assert_eq!(template.tokens[3], Placeholder(~"something"));
-		assert_eq!(template.tokens[4], String(~" template."));
+		assert_eq!(template.tokens.get(0), &String(~"Hello, "));
+		assert_eq!(template.tokens.get(1), &Placeholder(~"name"));
+		assert_eq!(template.tokens.get(2), &String(~"! This is a "));
+		assert_eq!(template.tokens.get(3), &Placeholder(~"something"));
+		assert_eq!(template.tokens.get(4), &String(~" template."));
 	}
 
 	#[test]
 	fn strange_tokens() {
 		let template: Template = from_str("Hello, [[[:name]]]! This is a [[[[:something]] template.").unwrap();
-		assert_eq!(template.tokens[0], String(~"Hello, "));
+		assert_eq!(template.tokens.get(0), &String(~"Hello, "));
 	}
 
 	#[test]
 	fn escaped_tokens() {
 		let template: Template = from_str("Hello, [[:name]]! Write placeholders like \\[[:this]] and escape them like \\\\\\[[:this]]").unwrap();
-		assert_eq!(template.tokens[0], String(~"Hello, "));
-		assert_eq!(template.tokens[1], Placeholder(~"name"));
-		assert_eq!(template.tokens[2], String(~"! Write placeholders like [[:this]] and escape them like \\[[:this]]"));
+		assert_eq!(template.tokens.get(0), &String(~"Hello, "));
+		assert_eq!(template.tokens.get(1), &Placeholder(~"name"));
+		assert_eq!(template.tokens.get(2), &String(~"! Write placeholders like [[:this]] and escape them like \\[[:this]]"));
 	}
 
 	#[test]
