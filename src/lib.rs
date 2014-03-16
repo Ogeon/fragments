@@ -45,17 +45,17 @@ enum Token {
 ///rest of the content.
 pub struct Template {
 	///Content for the placeholders
-	content: ~HashMap<~str, ~fmt::Show>,
+	content: HashMap<~str, ~fmt::Show>,
 	///Conditional switches
-	conditions: ~HashSet<~str>,
+	conditions: HashSet<~str>,
 	priv tokens: Vec<Token>
 }
 
 impl Template {
 	pub fn from_buffer(b: &mut Buffer) -> Template {
 		Template {
-			content: ~HashMap::new(),
-			conditions: ~HashSet::new(),
+			content: HashMap::new(),
+			conditions: HashSet::new(),
 			tokens: parse_block(b)
 		}
 	}
