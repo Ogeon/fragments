@@ -9,7 +9,7 @@ extern crate collections;
 
 use std::fmt;
 use std::from_str::FromStr;
-use std::io::BufReader;
+use std::io::{BufReader, IoError, EndOfFile};
 use std::vec_ng::Vec;
 use collections::hashmap::{HashMap, HashSet};
 
@@ -149,7 +149,8 @@ fn parse_string(b: &mut Buffer) -> ParserResult {
 					Ok(c) => {
 						content.push_char(c);
 					},
-					_ => break
+					Err(IoError{kind: EndOfFile, desc: _, detail: _}) => break,
+					Err(e) => fail!("{}", e)
 				}
 			},
 			Ok('[') => {
@@ -172,18 +173,22 @@ fn parse_string(b: &mut Buffer) -> ParserResult {
 									next_parser: None
 								}
 							},
-							_ => break
+							Ok(c) => fail!("Unknown token type: '{}'", c),
+							Err(IoError{kind: EndOfFile, desc: _, detail: _}) => break,
+							Err(e) => fail!("{}", e)
 						}
 					},
 					Ok(c) => {
 						content.push_char('[');
 						content.push_char(c);
 					},
-					Err(_) => content.push_char('[')
+					Err(IoError{kind: EndOfFile, desc: _, detail: _}) => content.push_char('['),
+					Err(e) => fail!("{}", e)
 				}
 			},
 			Ok(c) => content.push_char(c),
-			Err(_) => break
+			Err(IoError{kind: EndOfFile, desc: _, detail: _}) => break,
+			Err(e) => fail!("{}", e)
 		}
 	}
 
@@ -199,16 +204,20 @@ fn skip_to_token_end(b: &mut Buffer) {
 			Ok('\\') => {
 				match b.read_char() {
 					Ok(_) => {},
-					_ => break
+					Err(IoError{kind: EndOfFile, desc: _, detail: _}) => break,
+					Err(e) => fail!("{}", e)
 				}
 			},
 			Ok(']') => {
 				match b.read_char() {
 					Ok(']') => break,
+					Err(IoError{kind: EndOfFile, desc: _, detail: _}) => break,
+					Err(e) => fail!("{}", e),
 					_ => {}
 				}
 			},
-			Err(_) => break,
+			Err(IoError{kind: EndOfFile, desc: _, detail: _}) => break,
+			Err(e) => fail!("{}", e),
 			_ => {}
 		}
 	}
@@ -224,7 +233,8 @@ fn parse_placeholder(b: &mut Buffer) -> ParserResult {
 					Ok(c) => {
 						label.push_char(c);
 					},
-					_ => break
+					Err(IoError{kind: EndOfFile, desc: _, detail: _}) => break,
+					Err(e) => fail!("{}", e)
 				}
 			},
 			Ok(']') => {
@@ -239,11 +249,13 @@ fn parse_placeholder(b: &mut Buffer) -> ParserResult {
 						label.push_char(']');
 						label.push_char(c);
 					},
-					Err(_) => label.push_char(']')
+					Err(IoError{kind: EndOfFile, desc: _, detail: _}) => label.push_char(']'),
+					Err(e) => fail!("{}", e)
 				}
 			},
 			Ok(c) => label.push_char(c),
-			Err(_) => break
+			Err(IoError{kind: EndOfFile, desc: _, detail: _}) => break,
+			Err(e) => fail!("{}", e)
 		}
 	}
 
@@ -265,7 +277,8 @@ fn parse_conditional(b: &mut Buffer) -> ParserResult {
 					Ok(c) => {
 						label.push_char(c);
 					},
-					_ => break
+					Err(IoError{kind: EndOfFile, desc: _, detail: _}) => break,
+					Err(e) => fail!("{}", e)
 				}
 			},
 			Ok(']') => {
@@ -280,7 +293,8 @@ fn parse_conditional(b: &mut Buffer) -> ParserResult {
 						label.push_char(']');
 						label.push_char(c);
 					},
-					Err(_) => label.push_char(']')
+					Err(IoError{kind: EndOfFile, desc: _, detail: _}) => label.push_char(']'),
+					Err(e) => fail!("{}", e)
 				}
 			},
 			Ok('!') => {
@@ -294,7 +308,8 @@ fn parse_conditional(b: &mut Buffer) -> ParserResult {
 			Ok(c) => {
 				label.push_char(c)
 			},
-			Err(_) => break
+			Err(IoError{kind: EndOfFile, desc: _, detail: _}) => break,
+			Err(e) => fail!("{}", e)
 		}
 	}
 
@@ -320,9 +335,9 @@ mod test {
 	}
 
 	#[test]
+	#[should_fail]
 	fn strange_tokens() {
-		let template: Template = from_str("Hello, [[[:name]]]! This is a [[[[:something]] template.").unwrap();
-		assert_eq!(template.tokens.get(0), &String(~"Hello, "));
+		let _: Template = from_str("Hello, [[[:name]]]! This is a [[[[:something]] template.").unwrap();
 	}
 
 	#[test]
