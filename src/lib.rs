@@ -12,7 +12,7 @@ extern crate collections;
 use std::fmt;
 use std::from_str::FromStr;
 use std::io::{BufReader, IoError, EndOfFile};
-use std::vec_ng::Vec;
+use std::vec::Vec;
 use collections::hashmap::{HashMap, HashSet};
 
 type ParserState = Option<fn(&mut Buffer) -> ParserResult>;
