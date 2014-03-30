@@ -47,7 +47,7 @@ enum Token {
 ///rest of the content.
 pub struct Template {
 	///Content for the placeholders
-	content: HashMap<~str, ~fmt::Show>,
+	content: HashMap<~str, ~fmt::Show: Send>,
 	///Conditional switches
 	conditions: HashSet<~str>,
 	priv tokens: Vec<Token>
@@ -66,7 +66,7 @@ impl Template {
 	///Convenience method for inserting content.
 	#[inline]
 	pub fn insert<T: fmt::Show + Send>(&mut self, placeholder: ~str, item: ~T) {
-		self.content.insert(placeholder, item as ~fmt::Show);
+		self.content.insert(placeholder, item as ~fmt::Show: Send);
 	}
 
 	///Convenience method for setting a condition.
