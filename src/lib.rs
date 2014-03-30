@@ -1,11 +1,11 @@
-#[crate_id = "fragments#0.1-pre"];
+#![crate_id = "fragments#0.1-pre"]
 
-#[comment = "A simple template library for Rust"];
-#[license = "MIT"];
-#[crate_type = "lib"];
-#[crate_type = "rlib"];
+#![comment = "A simple template library for Rust"]
+#![license = "MIT"]
+#![crate_type = "lib"]
+#![crate_type = "rlib"]
 
-#[doc(html_root_url = "http://www.rust-ci.org/Ogeon/fragments/doc/")];
+#![doc(html_root_url = "http://www.rust-ci.org/Ogeon/fragments/doc/")]
 
 extern crate collections;
 
