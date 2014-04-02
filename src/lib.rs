@@ -50,7 +50,7 @@ pub struct Template {
 	content: HashMap<~str, ~fmt::Show: Send>,
 	///Conditional switches
 	conditions: HashSet<~str>,
-	priv tokens: Vec<Token>
+	tokens: Vec<Token>
 }
 
 impl Template {
