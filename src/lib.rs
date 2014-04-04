@@ -47,10 +47,10 @@ enum Token {
 ///rest of the content.
 pub struct Template {
 	///Content for the placeholders
-	content: HashMap<~str, ~fmt::Show: Send>,
+	pub content: HashMap<~str, ~fmt::Show: Send>,
 	///Conditional switches
-	conditions: HashSet<~str>,
-	priv tokens: Vec<Token>
+	pub conditions: HashSet<~str>,
+	tokens: Vec<Token>
 }
 
 impl Template {
