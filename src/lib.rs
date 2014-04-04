@@ -26,7 +26,8 @@ struct ParserResult {
 enum Token {
 	String(~str),
 	Placeholder(~str),
-	Conditional(~str, bool, Vec<Token>)
+	Conditional(~str, bool, Vec<Token>),
+	ContentConditional(~str, bool, Vec<Token>)
 }
 
 ///A string template with placeholders and conditional content.
@@ -40,7 +41,8 @@ enum Token {
 ///and they are used to display content depending on whether its label exists in the `conditions` set.
 ///`[[/]]` marks the end of a block and may contain other characters after the `/`, which may be useful for labeling the end mark.
 ///Conditions can be made negative by writing `[[?!label]]...[[/]]`, which makes the content visible if the label
-///is missing from the `conditions` set.
+///is missing from the `conditions` set. Conditional segments can also depend on whether a placeholder has an assgined value. 
+///Just write them like this: `[[?:label]]...[[/]]` or `[[?!:label]]...[[/]]`.
 ///
 ///Any character can be escaped by writing `\` before it. It can be used like this: `\[[[:label1]], [[:label2]]]`
 ///which will result in `[content1, content2]`, since the first `[` will be ignored by the parser and just added to the
@@ -93,6 +95,14 @@ impl Template {
 
 				&Conditional(ref k, expected, ref tokens) => {
 					if self.conditions.contains(k) == expected {
+						self.format_tokens(tokens, f)
+					} else {
+						Ok(())
+					}
+				},
+
+				&ContentConditional(ref k, expected, ref tokens) => {
+					if self.content.contains_key(k) == expected {
 						self.format_tokens(tokens, f)
 					} else {
 						Ok(())
@@ -271,6 +281,8 @@ fn parse_conditional(b: &mut Buffer) -> ParserResult {
 	let mut label = ~"";
 	let mut expected = true;
 	let mut expected_set = false;
+	let mut content_condition = false;
+	let mut content_condition_set = false;
 
 	loop {
 		match b.read_char() {
@@ -287,7 +299,11 @@ fn parse_conditional(b: &mut Buffer) -> ParserResult {
 				match b.read_char() {
 					Ok(']') => {
 						return ParserResult{
-							token: Conditional(label, expected, parse_block(b)),
+							token: if content_condition {
+								ContentConditional(label, expected, parse_block(b))
+							} else {
+								Conditional(label, expected, parse_block(b))
+							},
 							next_parser: Some(parse_string)
 						}
 					},
@@ -305,6 +321,15 @@ fn parse_conditional(b: &mut Buffer) -> ParserResult {
 					expected_set = true;
 				} else {
 					label.push_char('!');
+				}
+			},
+			Ok(':') => {
+				if label.len() == 0 && !content_condition_set {
+					content_condition = true;
+					content_condition_set = true;
+					expected_set = true;
+				} else {
+					label.push_char(':');
 				}
 			},
 			Ok(c) => {
@@ -386,5 +411,13 @@ mod test {
 		assert_eq!(template.to_str(), ~"Hello, Peter! The condition is false.");
 		template.set(~"condition", true);
 		assert_eq!(template.to_str(), ~"Hello, Peter! The condition is true.");
+	}
+
+	#[test]
+	fn content_conditional() {
+		let mut template: Template = from_str("Hello[[?:name]], [[:name]][[/name]]![[?!:name]] I don't know you.[[/!name]]").unwrap();
+		assert_eq!(template.to_str(), ~"Hello! I don't know you.");
+		template.insert(~"name", ~("Peter"));
+		assert_eq!(template.to_str(), ~"Hello, Peter!");
 	}
 }
