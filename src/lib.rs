@@ -152,7 +152,7 @@ fn parse_block(b: &mut Buffer) -> Vec<Token> {
 }
 
 fn parse_string(b: &mut Buffer) -> ParserResult {
-	let mut content = ~"";
+	let mut content = StrBuf::new();
 
 	loop {
 		match b.read_char() {
@@ -170,18 +170,18 @@ fn parse_string(b: &mut Buffer) -> ParserResult {
 					Ok('[') => {
 						match b.read_char() {
 							Ok(':') => return ParserResult{
-								token: String(content),
+								token: String(content.into_owned()),
 								next_parser: Some(parse_placeholder)
 							},
 							Ok('?') => return ParserResult{
-								token: String(content),
+								token: String(content.into_owned()),
 								next_parser: Some(parse_conditional)
 							},
 							Ok('/') => {
 								skip_to_token_end(b);
 
 								return ParserResult{
-									token: String(content),
+									token: String(content.into_owned()),
 									next_parser: None
 								}
 							},
@@ -205,7 +205,7 @@ fn parse_string(b: &mut Buffer) -> ParserResult {
 	}
 
 	ParserResult{
-		token: String(content),
+		token: String(content.into_owned()),
 		next_parser: None
 	}
 }
@@ -236,7 +236,7 @@ fn skip_to_token_end(b: &mut Buffer) {
 }
 
 fn parse_placeholder(b: &mut Buffer) -> ParserResult {
-	let mut label = ~"";
+	let mut label = StrBuf::new();
 
 	loop {
 		match b.read_char() {
@@ -253,7 +253,7 @@ fn parse_placeholder(b: &mut Buffer) -> ParserResult {
 				match b.read_char() {
 					Ok(']') => {
 						return ParserResult{
-							token: Placeholder(label),
+							token: Placeholder(label.into_owned()),
 							next_parser: Some(parse_string)
 						}
 					},
@@ -272,13 +272,13 @@ fn parse_placeholder(b: &mut Buffer) -> ParserResult {
 	}
 
 	ParserResult{
-		token: Placeholder(label),
+		token: Placeholder(label.into_owned()),
 		next_parser: None
 	}
 }
 
 fn parse_conditional(b: &mut Buffer) -> ParserResult {
-	let mut label = ~"";
+	let mut label = StrBuf::new();
 	let mut expected = true;
 	let mut expected_set = false;
 	let mut content_condition = false;
@@ -300,9 +300,9 @@ fn parse_conditional(b: &mut Buffer) -> ParserResult {
 					Ok(']') => {
 						return ParserResult{
 							token: if content_condition {
-								ContentConditional(label, expected, parse_block(b))
+								ContentConditional(label.into_owned(), expected, parse_block(b))
 							} else {
-								Conditional(label, expected, parse_block(b))
+								Conditional(label.into_owned(), expected, parse_block(b))
 							},
 							next_parser: Some(parse_string)
 						}
@@ -341,7 +341,7 @@ fn parse_conditional(b: &mut Buffer) -> ParserResult {
 	}
 
 	ParserResult{
-		token: Conditional(label, expected, vec!()),
+		token: Conditional(label.into_owned(), expected, vec!()),
 		next_parser: None
 	}
 }
