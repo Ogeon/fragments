@@ -130,6 +130,8 @@ result will be inserted into the content.
 extern crate fragments;
 use fragments::Template;
 
+//This function will just concatenate the arguments.
+//I expect you to make cooler generators, yourself ;)
 fn join(parts: &[~str]) -> ~Show {
 	~(parts.concat()) as ~Show
 }
