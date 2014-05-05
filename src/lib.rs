@@ -33,7 +33,7 @@ enum Token {
 ///A string template with placeholders and conditional content.
 ///
 ///Placeholders are written as `[[:label]]`, where `label` becomes the name of the placeholder.
-///The label is then used to insert content: `my_template.insert(~"label", my_content);`.
+///The label is then used to insert content: `my_template.insert("label", my_content);`.
 ///The assigned content for a placeholder can be anything that implements `Show`.
 ///Even other templates may be inserted, which allows a more atomic structure.
 ///
@@ -67,17 +67,17 @@ impl Template {
 
 	///Convenience method for inserting content.
 	#[inline]
-	pub fn insert<T: fmt::Show + Send>(&mut self, placeholder: ~str, item: ~T) {
-		self.content.insert(placeholder, item as ~fmt::Show: Send);
+	pub fn insert<T: fmt::Show + Send>(&mut self, placeholder: &str, item: ~T) {
+		self.content.insert(placeholder.to_owned(), item as ~fmt::Show: Send);
 	}
 
 	///Convenience method for setting a condition.
 	#[inline]
-	pub fn set(&mut self, condition: ~str, value: bool) {
+	pub fn set(&mut self, condition: &str, value: bool) {
 		if value {
-			self.conditions.insert(condition);
+			self.conditions.insert(condition.to_owned());
 		} else {
-			self.conditions.remove(&condition);
+			self.conditions.remove(&condition.to_owned());
 		}
 	}
 
@@ -354,11 +354,11 @@ mod test {
 	#[test]
 	fn basic_tokens() {
 		let template: Template = from_str("Hello, [[:name]]! This is a [[:something]] template.").unwrap();
-		assert_eq!(template.tokens.get(0), &String(~"Hello, "));
-		assert_eq!(template.tokens.get(1), &Placeholder(~"name"));
-		assert_eq!(template.tokens.get(2), &String(~"! This is a "));
-		assert_eq!(template.tokens.get(3), &Placeholder(~"something"));
-		assert_eq!(template.tokens.get(4), &String(~" template."));
+		assert_eq!(template.tokens.get(0), &String("Hello, ".to_owned()));
+		assert_eq!(template.tokens.get(1), &Placeholder("name".to_owned()));
+		assert_eq!(template.tokens.get(2), &String("! This is a ".to_owned()));
+		assert_eq!(template.tokens.get(3), &Placeholder("something".to_owned()));
+		assert_eq!(template.tokens.get(4), &String(" template.".to_owned()));
 	}
 
 	#[test]
@@ -370,54 +370,54 @@ mod test {
 	#[test]
 	fn escaped_tokens() {
 		let template: Template = from_str("Hello, [[:name]]! Write placeholders like \\[[:this]] and escape them like \\\\\\[[:this]]").unwrap();
-		assert_eq!(template.tokens.get(0), &String(~"Hello, "));
-		assert_eq!(template.tokens.get(1), &Placeholder(~"name"));
-		assert_eq!(template.tokens.get(2), &String(~"! Write placeholders like [[:this]] and escape them like \\[[:this]]"));
+		assert_eq!(template.tokens.get(0), &String("Hello, ".to_owned()));
+		assert_eq!(template.tokens.get(1), &Placeholder("name".to_owned()));
+		assert_eq!(template.tokens.get(2), &String("! Write placeholders like [[:this]] and escape them like \\[[:this]]".to_owned()));
 	}
 
 	#[test]
 	fn replacement() {
 		let mut template: Template = from_str("Hello, [[:name]]! This is a [[:something]] template.").unwrap();
-		template.insert(~"name", ~("Peter"));
-		template.insert(~"something", ~("nice"));
-		assert_eq!(template.to_str(), ~"Hello, Peter! This is a nice template.");
+		template.insert("name", ~("Peter"));
+		template.insert("something", ~("nice"));
+		assert_eq!(template.to_str(), "Hello, Peter! This is a nice template.".to_owned());
 	}
 
 	#[test]
 	fn templates_in_templates() {
 		let mut template1: Template = from_str("Hello, [[:name]]! This is a [[:something]] template.").unwrap();
 		let mut template2: ~Template = ~from_str("really [[:something]]").unwrap();
-		template1.insert(~"name", ~("Peter"));
-		template2.insert(~"something", ~("nice"));
+		template1.insert("name", ~("Peter"));
+		template2.insert("something", ~("nice"));
 
-		template1.insert(~"something", template2);
+		template1.insert("something", template2);
 
-		assert_eq!(template1.to_str(), ~"Hello, Peter! This is a really nice template.");
+		assert_eq!(template1.to_str(), "Hello, Peter! This is a really nice template.".to_owned());
 	}
 
 	#[test]
 	fn conditional() {
 		let mut template: Template = from_str("Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]").unwrap();
-		template.insert(~"name", ~("Peter"));
-		assert_eq!(template.to_str(), ~"Hello, Peter!");
-		template.set(~"condition", true);
-		assert_eq!(template.to_str(), ~"Hello, Peter! The condition is true.");
+		template.insert("name", ~("Peter"));
+		assert_eq!(template.to_str(), "Hello, Peter!".to_owned());
+		template.set("condition", true);
+		assert_eq!(template.to_str(), "Hello, Peter! The condition is true.".to_owned());
 	}
 
 	#[test]
 	fn conditional_switch() {
 		let mut template: Template = from_str("Hello, [[:name]]! The condition is [[?condition]]true[[/condition]][[?!condition]]false[[/condition]].").unwrap();
-		template.insert(~"name", ~("Peter"));
-		assert_eq!(template.to_str(), ~"Hello, Peter! The condition is false.");
-		template.set(~"condition", true);
-		assert_eq!(template.to_str(), ~"Hello, Peter! The condition is true.");
+		template.insert("name", ~("Peter"));
+		assert_eq!(template.to_str(), "Hello, Peter! The condition is false.".to_owned());
+		template.set("condition", true);
+		assert_eq!(template.to_str(), "Hello, Peter! The condition is true.".to_owned());
 	}
 
 	#[test]
 	fn content_conditional() {
 		let mut template: Template = from_str("Hello[[?:name]], [[:name]][[/name]]![[?!:name]] I don't know you.[[/!name]]").unwrap();
-		assert_eq!(template.to_str(), ~"Hello! I don't know you.");
-		template.insert(~"name", ~("Peter"));
-		assert_eq!(template.to_str(), ~"Hello, Peter!");
+		assert_eq!(template.to_str(), "Hello! I don't know you.".to_owned());
+		template.insert("name", ~("Peter"));
+		assert_eq!(template.to_str(), "Hello, Peter!".to_owned());
 	}
 }

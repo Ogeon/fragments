@@ -39,7 +39,7 @@ fn main() {
 
 	//Insert something into the `name` placeholder
 	//The ~(...) pattern is currently necessary because of how the compiler handles ~str
-	template.insert(~"name", ~("Peter"));
+	template.insert("name", ~("Peter"));
 
 	//Templates can be printed as they are
 	//Result: 'Hello, Peter!'
@@ -57,7 +57,7 @@ fn main() {
 
 	//Insert something into the `name` placeholder
 	//The ~(...) pattern is currently necessary because of how the compiler handles ~str
-	template.insert(~"name", ~("Peter"));
+	template.insert("name", ~("Peter"));
 
 	//Templates can be printed as they are
 	//Result: 'Hello, Peter!'
@@ -79,7 +79,7 @@ fn main() {
 
 	//Insert something into the `name` placeholder
 	//The ~(...) pattern is currently necessary because of how the compiler handles ~str
-	template.insert(~"name", ~("Peter"));
+	template.insert("name", ~("Peter"));
 
 	//Templates can be printed as they are
 	//Result: 'Hello, Peter! Write placeholders like [[:this]] and escape them like \[[:this]]'
@@ -106,14 +106,14 @@ fn main() {
 
 	//Insert something into the `name` placeholder
 	//The ~(...) pattern is currently necessary because of how the compiler handles ~str
-	template.insert(~"name", ~("Peter"));
+	template.insert("name", ~("Peter"));
 
 	//Conditions are false by default, so the second sentence will be disabled
 	//Result: 'Hello, Peter!'
 	println!("Result: '{}'", template);
 
 	//Let's enable the hidden part of the template
-	template.set(~"condition", true);
+	template.set("condition", true);
 
 	//Result: 'Hello, Peter! The condition is true.'
 	println!("Result: '{}'", template);
