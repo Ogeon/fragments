@@ -65,7 +65,7 @@ fn main() {
 }
 ```
 
-##Escape sequences
+##Escape Sequences
 Any character with a `\` in front of it will be treated as any other character by the parser:
 ```rust
 extern crate fragments;
@@ -73,8 +73,8 @@ use fragments::Template;
 
 fn main() {
 	//Create a new Template from a string
-	//Here we will have to escape the escapes, but it will result in
-	//'[...]\[[:this]] and escape them like \\\[[:this]][...]'
+	//We will have to escape the escapes when writing it as a string literal,
+	//but it's the same as '[...]\[[:this]] and escape them like \\\[[:this]][...]'
 	let mut template: Template = from_str("Hello, [[:name]]! Write placeholders like \\[[:this]] and escape them like \\\\\\[[:this]]").unwrap();
 
 	//Insert something into the `name` placeholder
@@ -87,7 +87,7 @@ fn main() {
 }
 ```
 
-##Conditional content
+##Conditional Content
 Parts of the content may be switched on or off with conditional switches.
 A conditional part of a template is defined as `[[?something]]...[[/]]`, where the
 `[[?...]]` token contains the name of the condition and `[[/]]` marks the end
@@ -100,8 +100,6 @@ use fragments::Template;
 
 fn main() {
 	//Create a new Template from a string
-	//Here we will have to escape the escapes, but it will result in
-	//'[...]\[[:this]] and escape them like \\\[[:this]][...]'
 	let mut template: Template = from_str("Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]").unwrap();
 
 	//Insert something into the `name` placeholder
@@ -121,3 +119,34 @@ fn main() {
 ```
 
 Conditional parts can also be negated by adding an `!` after the `?`, like this: `[[?!something]]`.
+
+##Generated Content
+Content can also be generated, using a generator token: `[[+label arg1 arg2 ...]]`. The label and the arguments are
+separated by one or more whitespaces. They can also be quoted to prevent special characters from being parsed:
+`[[+"my label" arg1 "[[arg2]]"]]`. The arguments will be passed to an instance of the `Generator` trait and the
+result will be inserted into the content.
+
+```rust
+extern crate fragments;
+use fragments::Template;
+
+fn join(parts: &[~str]) -> ~Show {
+	~(parts.concat()) as ~Show
+}
+
+
+fn main() {
+	//Create a new Template from a string
+	let mut template: Template = from_str("Hello, [[:name]]! Is it written as 'white space' or '[[+join white space]]'?").unwrap();
+
+	//Insert something into the `name` placeholder
+	//The ~(...) pattern is currently necessary because of how the compiler handles ~str
+	template.insert("name", ~("Peter"));
+
+	//Functions with the signature `fn(&[~str]) -> ~Show` will automatically implement the `Generator` trait
+	template.insert_generator("join", ~join);
+
+	//Result: "Hello, Peter! Is it written as 'white space' or 'whitespace'?"
+	println!("Result: '{}'", template);
+}
+```

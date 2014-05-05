@@ -11,23 +11,18 @@ extern crate collections;
 
 use std::fmt;
 use std::from_str::FromStr;
-use std::io::{BufReader, IoError, EndOfFile};
 use std::vec::Vec;
 use collections::hashmap::{HashMap, HashSet};
 
-type ParserState = Option<fn(&mut Buffer) -> ParserResult>;
-
-struct ParserResult {
-	token: Token,
-	next_parser: ParserState
-}
+mod parser;
 
 #[deriving(Eq, TotalEq, Show)]
 enum Token {
 	String(~str),
 	Placeholder(~str),
 	Conditional(~str, bool, Vec<Token>),
-	ContentConditional(~str, bool, Vec<Token>)
+	ContentConditional(~str, bool, Vec<Token>),
+	Generated(~str, Vec<~str>)
 }
 
 ///A string template with placeholders and conditional content.
@@ -44,40 +39,73 @@ enum Token {
 ///is missing from the `conditions` set. Conditional segments can also depend on whether a placeholder has an assgined value. 
 ///Just write them like this: `[[?:label]]...[[/]]` or `[[?!:label]]...[[/]]`.
 ///
+///Content can also be generated, using a generator token: `[[+label arg1 arg2 ...]]`. The label and the arguments are
+///separated by one or more whitespaces. They can also be quoted to prevent special characters from being parsed:
+///`[[+"my label" arg1 "[[arg2]]"]]`. The arguments will be passed to an instance of the `Generator` trait and the
+///result will be inserted into the content.
+///
 ///Any character can be escaped by writing `\` before it. It can be used like this: `\[[[:label1]], [[:label2]]]`
-///which will result in `[content1, content2]`, since the first `[` will be ignored by the parser and just added to the
+///which will result in `[content1, content2]`, since the first `[` will be ignored by the parser and added to the
 ///rest of the content.
 pub struct Template {
 	///Content for the placeholders
 	pub content: HashMap<~str, ~fmt::Show: Send>,
+	///Content generators
+	pub generators: HashMap<~str, ~Generator: Send>,
 	///Conditional switches
 	pub conditions: HashSet<~str>,
 	tokens: Vec<Token>
 }
 
 impl Template {
+	///Create a new `Template` from a character iterator.
 	#[inline]
-	pub fn from_buffer(b: &mut Buffer) -> Template {
-		Template {
+	pub fn from_chars(b: &mut std::str::Chars) -> Result<Template, ~str> {
+		let tokens = try!(parser::parse(&mut b.map(|r| Ok::<char, ~str>(r))));
+
+		Ok(Template {
 			content: HashMap::new(),
+			generators: HashMap::new(),
 			conditions: HashSet::new(),
-			tokens: parse_block(b)
-		}
+			tokens: tokens
+		})
+	}
+
+	///Create a new `Template` from a buffer.
+	#[inline]
+	pub fn from_buffer<T: Buffer>(b: &mut T) -> Result<Template, ~str> {
+		let tokens = try!(parser::parse(&mut b.chars().map(|r| match r {
+			Ok(c) => Ok(c),
+			Err(e) => Err(format!("io error: {}", e))
+		})));
+
+		Ok(Template {
+			content: HashMap::new(),
+			generators: HashMap::new(),
+			conditions: HashSet::new(),
+			tokens: tokens
+		})
 	}
 
 	///Convenience method for inserting content.
 	#[inline]
-	pub fn insert<T: fmt::Show + Send>(&mut self, placeholder: &str, item: ~T) {
-		self.content.insert(placeholder.to_owned(), item as ~fmt::Show: Send);
+	pub fn insert<T: fmt::Show + Send>(&mut self, label: &str, item: ~T) {
+		self.content.insert(label.to_owned(), item as ~fmt::Show: Send);
+	}
+
+	///Convenience method for inserting generators.
+	#[inline]
+	pub fn insert_generator<T: Generator + Send>(&mut self, label: &str, gen: ~T) {
+		self.generators.insert(label.to_owned(), gen as ~Generator: Send);
 	}
 
 	///Convenience method for setting a condition.
 	#[inline]
-	pub fn set(&mut self, condition: &str, value: bool) {
+	pub fn set(&mut self, label: &str, value: bool) {
 		if value {
-			self.conditions.insert(condition.to_owned());
+			self.conditions.insert(label.to_owned());
 		} else {
-			self.conditions.remove(&condition.to_owned());
+			self.conditions.remove(&label.to_owned());
 		}
 	}
 
@@ -107,6 +135,13 @@ impl Template {
 					} else {
 						Ok(())
 					}
+				},
+
+				&Generated(ref k, ref vars) => {
+					match self.generators.find(k) {
+						Some(gen) => gen.generate(vars.as_slice()).fmt(f),
+						None => Ok(())
+					}
 				}
 			};
 
@@ -123,7 +158,10 @@ impl Template {
 impl FromStr for Template {
 	///Creates a new `Template` from a string.
 	fn from_str(s: &str) -> Option<Template> {
-		Some(Template::from_buffer(&mut BufReader::new(s.as_bytes())))
+		match Template::from_chars(&mut s.chars()) {
+			Ok(template) => Some(template),
+			Err(_) => None
+		}
 	}
 }
 
@@ -133,216 +171,15 @@ impl fmt::Show for Template {
 	}
 }
 
-fn parse_block(b: &mut Buffer) -> Vec<Token> {
-	let mut tokens = vec!();
-	let mut parser = parse_string;
 
-	loop {
-		let ParserResult{token: token, next_parser: next} = parser(b);
-
-		tokens.push(token);
-
-		match next {
-			Some(p) => parser = p,
-			None => break
-		}
-	}
-
-	tokens
+///A trait for content generators.
+pub trait Generator {
+	fn generate(&self, args: &[~str]) -> ~fmt::Show;
 }
 
-fn parse_string(b: &mut Buffer) -> ParserResult {
-	let mut content = StrBuf::new();
-
-	loop {
-		match b.read_char() {
-			Ok('\\') => {
-				match b.read_char() {
-					Ok(c) => {
-						content.push_char(c);
-					},
-					Err(IoError{kind: EndOfFile, desc: _, detail: _}) => break,
-					Err(e) => fail!("{}", e)
-				}
-			},
-			Ok('[') => {
-				match b.read_char() {
-					Ok('[') => {
-						match b.read_char() {
-							Ok(':') => return ParserResult{
-								token: String(content.into_owned()),
-								next_parser: Some(parse_placeholder)
-							},
-							Ok('?') => return ParserResult{
-								token: String(content.into_owned()),
-								next_parser: Some(parse_conditional)
-							},
-							Ok('/') => {
-								skip_to_token_end(b);
-
-								return ParserResult{
-									token: String(content.into_owned()),
-									next_parser: None
-								}
-							},
-							Ok(c) => fail!("Unknown token type: '{}'", c),
-							Err(IoError{kind: EndOfFile, desc: _, detail: _}) => break,
-							Err(e) => fail!("{}", e)
-						}
-					},
-					Ok(c) => {
-						content.push_char('[');
-						content.push_char(c);
-					},
-					Err(IoError{kind: EndOfFile, desc: _, detail: _}) => content.push_char('['),
-					Err(e) => fail!("{}", e)
-				}
-			},
-			Ok(c) => content.push_char(c),
-			Err(IoError{kind: EndOfFile, desc: _, detail: _}) => break,
-			Err(e) => fail!("{}", e)
-		}
-	}
-
-	ParserResult{
-		token: String(content.into_owned()),
-		next_parser: None
-	}
-}
-
-fn skip_to_token_end(b: &mut Buffer) {
-	loop {
-		match b.read_char() {
-			Ok('\\') => {
-				match b.read_char() {
-					Ok(_) => {},
-					Err(IoError{kind: EndOfFile, desc: _, detail: _}) => break,
-					Err(e) => fail!("{}", e)
-				}
-			},
-			Ok(']') => {
-				match b.read_char() {
-					Ok(']') => break,
-					Err(IoError{kind: EndOfFile, desc: _, detail: _}) => break,
-					Err(e) => fail!("{}", e),
-					_ => {}
-				}
-			},
-			Err(IoError{kind: EndOfFile, desc: _, detail: _}) => break,
-			Err(e) => fail!("{}", e),
-			_ => {}
-		}
-	}
-}
-
-fn parse_placeholder(b: &mut Buffer) -> ParserResult {
-	let mut label = StrBuf::new();
-
-	loop {
-		match b.read_char() {
-			Ok('\\') => {
-				match b.read_char() {
-					Ok(c) => {
-						label.push_char(c);
-					},
-					Err(IoError{kind: EndOfFile, desc: _, detail: _}) => break,
-					Err(e) => fail!("{}", e)
-				}
-			},
-			Ok(']') => {
-				match b.read_char() {
-					Ok(']') => {
-						return ParserResult{
-							token: Placeholder(label.into_owned()),
-							next_parser: Some(parse_string)
-						}
-					},
-					Ok(c) => {
-						label.push_char(']');
-						label.push_char(c);
-					},
-					Err(IoError{kind: EndOfFile, desc: _, detail: _}) => label.push_char(']'),
-					Err(e) => fail!("{}", e)
-				}
-			},
-			Ok(c) => label.push_char(c),
-			Err(IoError{kind: EndOfFile, desc: _, detail: _}) => break,
-			Err(e) => fail!("{}", e)
-		}
-	}
-
-	ParserResult{
-		token: Placeholder(label.into_owned()),
-		next_parser: None
-	}
-}
-
-fn parse_conditional(b: &mut Buffer) -> ParserResult {
-	let mut label = StrBuf::new();
-	let mut expected = true;
-	let mut expected_set = false;
-	let mut content_condition = false;
-	let mut content_condition_set = false;
-
-	loop {
-		match b.read_char() {
-			Ok('\\') => {
-				match b.read_char() {
-					Ok(c) => {
-						label.push_char(c);
-					},
-					Err(IoError{kind: EndOfFile, desc: _, detail: _}) => break,
-					Err(e) => fail!("{}", e)
-				}
-			},
-			Ok(']') => {
-				match b.read_char() {
-					Ok(']') => {
-						return ParserResult{
-							token: if content_condition {
-								ContentConditional(label.into_owned(), expected, parse_block(b))
-							} else {
-								Conditional(label.into_owned(), expected, parse_block(b))
-							},
-							next_parser: Some(parse_string)
-						}
-					},
-					Ok(c) => {
-						label.push_char(']');
-						label.push_char(c);
-					},
-					Err(IoError{kind: EndOfFile, desc: _, detail: _}) => label.push_char(']'),
-					Err(e) => fail!("{}", e)
-				}
-			},
-			Ok('!') => {
-				if label.len() == 0 && !expected_set {
-					expected = false;
-					expected_set = true;
-				} else {
-					label.push_char('!');
-				}
-			},
-			Ok(':') => {
-				if label.len() == 0 && !content_condition_set {
-					content_condition = true;
-					content_condition_set = true;
-					expected_set = true;
-				} else {
-					label.push_char(':');
-				}
-			},
-			Ok(c) => {
-				label.push_char(c)
-			},
-			Err(IoError{kind: EndOfFile, desc: _, detail: _}) => break,
-			Err(e) => fail!("{}", e)
-		}
-	}
-
-	ParserResult{
-		token: Conditional(label.into_owned(), expected, vec!()),
-		next_parser: None
+impl Generator for fn(args: &[~str]) -> ~fmt::Show {
+	fn generate(&self, args: &[~str]) -> ~fmt::Show {
+		(*self)(args)
 	}
 }
 
@@ -350,6 +187,18 @@ fn parse_conditional(b: &mut Buffer) -> ParserResult {
 #[cfg(test)]
 mod test {
 	use super::{Template, Placeholder, String};
+	use std::fmt::Show;
+
+	fn monitored_from_str(s: &str) -> Template {
+		match Template::from_chars(&mut s.chars()) {
+			Ok(template) => template,
+			Err(e) => fail!(e)
+		}
+	}
+
+	fn echo(parts: &[~str]) -> ~Show {
+		~(parts.connect(":")) as ~Show
+	}
 
 	#[test]
 	fn basic_tokens() {
@@ -369,7 +218,7 @@ mod test {
 
 	#[test]
 	fn escaped_tokens() {
-		let template: Template = from_str("Hello, [[:name]]! Write placeholders like \\[[:this]] and escape them like \\\\\\[[:this]]").unwrap();
+		let template: Template = monitored_from_str("Hello, [[:name]]! Write placeholders like \\[[:this]] and escape them like \\\\\\[[:this]]");
 		assert_eq!(template.tokens.get(0), &String("Hello, ".to_owned()));
 		assert_eq!(template.tokens.get(1), &Placeholder("name".to_owned()));
 		assert_eq!(template.tokens.get(2), &String("! Write placeholders like [[:this]] and escape them like \\[[:this]]".to_owned()));
@@ -377,7 +226,7 @@ mod test {
 
 	#[test]
 	fn replacement() {
-		let mut template: Template = from_str("Hello, [[:name]]! This is a [[:something]] template.").unwrap();
+		let mut template: Template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
 		template.insert("name", ~("Peter"));
 		template.insert("something", ~("nice"));
 		assert_eq!(template.to_str(), "Hello, Peter! This is a nice template.".to_owned());
@@ -385,8 +234,8 @@ mod test {
 
 	#[test]
 	fn templates_in_templates() {
-		let mut template1: Template = from_str("Hello, [[:name]]! This is a [[:something]] template.").unwrap();
-		let mut template2: ~Template = ~from_str("really [[:something]]").unwrap();
+		let mut template1: Template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
+		let mut template2: ~Template = ~monitored_from_str("really [[:something]]");
 		template1.insert("name", ~("Peter"));
 		template2.insert("something", ~("nice"));
 
@@ -397,7 +246,7 @@ mod test {
 
 	#[test]
 	fn conditional() {
-		let mut template: Template = from_str("Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]").unwrap();
+		let mut template: Template = monitored_from_str("Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]");
 		template.insert("name", ~("Peter"));
 		assert_eq!(template.to_str(), "Hello, Peter!".to_owned());
 		template.set("condition", true);
@@ -406,7 +255,7 @@ mod test {
 
 	#[test]
 	fn conditional_switch() {
-		let mut template: Template = from_str("Hello, [[:name]]! The condition is [[?condition]]true[[/condition]][[?!condition]]false[[/condition]].").unwrap();
+		let mut template: Template = monitored_from_str("Hello, [[:name]]! The condition is [[?condition]]true[[/condition]][[?!condition]]false[[/condition]].");
 		template.insert("name", ~("Peter"));
 		assert_eq!(template.to_str(), "Hello, Peter! The condition is false.".to_owned());
 		template.set("condition", true);
@@ -415,9 +264,17 @@ mod test {
 
 	#[test]
 	fn content_conditional() {
-		let mut template: Template = from_str("Hello[[?:name]], [[:name]][[/name]]![[?!:name]] I don't know you.[[/!name]]").unwrap();
+		let mut template: Template = monitored_from_str("Hello[[?:name]], [[:name]][[/name]]![[?!:name]] I don't know you.[[/!name]]");
 		assert_eq!(template.to_str(), "Hello! I don't know you.".to_owned());
 		template.insert("name", ~("Peter"));
 		assert_eq!(template.to_str(), "Hello, Peter!".to_owned());
+	}
+
+	#[test]
+	fn generator() {
+		let mut template: Template = monitored_from_str("[[+\"say hello\" hello Peter    \"how are\" you?]]");
+		template.insert_generator("say hello", ~echo);
+
+		assert_eq!(template.to_str(), "hello:Peter:how are:you?".to_owned());
 	}
 }
