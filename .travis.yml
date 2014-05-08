@@ -1,11 +1,8 @@
 env:
   global:
     - secure: Q30qm7Uj+tO65CMrEbqPXAeeY439lf+qLR77LozWuJJ318/1w6lAyaL2s5o2uQ86fQvJKQkabnabtuqBv+y+jW5P7LXXHPe0xr8VWg+9/hIje6FoyrTO9HqfG6X4tbZZMZUzSWJcUrqZdex/A0ot8BWH4FgDxMxa5FN6HOeTP3Y=
-before_install:
-  - yes | sudo add-apt-repository ppa:hansjorg/rust
-  - sudo apt-get update
 install:
-  - sudo apt-get install rust-nightly
+  - curl -s http://www.rust-lang.org/rustup.sh | sudo sh
 script:
   - make
   - make test
