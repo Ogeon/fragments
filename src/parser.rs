@@ -37,17 +37,19 @@ impl<T: Iterator<V>, V: Eq> Parser<T, V> {
 		eaten
 	}
 
-	fn eat_if(&mut self, is_edible: |&V| -> bool) -> bool {
-		let eaten = match self.peek() {
-			Some(t) => is_edible(t),
-			_ => false
-		};
+	fn eat_while(&mut self, is_edible: |&V| -> bool) {
+		loop {
+			let eaten = match self.peek() {
+				Some(t) => is_edible(t),
+				_ => false
+			};
 
-		if eaten {
-			self.next();
+			if eaten {
+				self.next();
+			} else {
+				break;
+			}
 		}
-
-		eaten
 	}
 
 	#[inline]
@@ -237,7 +239,7 @@ fn parse_generator<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) -> R
 	'arg_list: loop {
 		let mut new_arg = StrBuf::new();
 
-		while tokens.eat_if(|&t| match t {Character(c) if c.is_whitespace() => true, _ => false}) {};
+		tokens.eat_while(|&t| match t {Character(c) if c.is_whitespace() => true, _ => false});
 
 		if tokens.eat(Quote) {
 			for t in tokens.by_ref().take_while(|&t| t != Quote).map(|t| t.to_str()) {
@@ -251,7 +253,7 @@ fn parse_generator<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) -> R
 						break 'arg_list;
 					},
 					Some(Character(c)) if c.is_whitespace() => {
-						while tokens.eat_if(|&t| match t {Character(c) if c.is_whitespace() => true, _ => false}) {}
+						tokens.eat_while(|&t| match t {Character(c) if c.is_whitespace() => true, _ => false});
 						break 'arg
 					},
 					Some(t) => new_arg.push_str(t.to_str()),
