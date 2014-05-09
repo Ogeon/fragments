@@ -49,9 +49,9 @@ enum Token {
 ///rest of the content.
 pub struct Template {
 	///Content for the placeholders
-	pub content: HashMap<~str, ~fmt::Show: Send>,
+	pub content: HashMap<~str, Box<fmt::Show: Send>>,
 	///Content generators
-	pub generators: HashMap<~str, ~Generator: Send>,
+	pub generators: HashMap<~str, Box<Generator: Send>>,
 	///Conditional switches
 	pub conditions: HashSet<~str>,
 	tokens: Vec<Token>
@@ -89,14 +89,14 @@ impl Template {
 
 	///Convenience method for inserting content.
 	#[inline]
-	pub fn insert<T: fmt::Show + Send>(&mut self, label: &str, item: ~T) {
-		self.content.insert(label.to_owned(), item as ~fmt::Show: Send);
+	pub fn insert<T: fmt::Show + Send>(&mut self, label: &str, item: Box<T>) {
+		self.content.insert(label.to_owned(), item as Box<fmt::Show: Send>);
 	}
 
 	///Convenience method for inserting generators.
 	#[inline]
-	pub fn insert_generator<T: Generator + Send>(&mut self, label: &str, gen: ~T) {
-		self.generators.insert(label.to_owned(), gen as ~Generator: Send);
+	pub fn insert_generator<T: Generator + Send>(&mut self, label: &str, gen: Box<T>) {
+		self.generators.insert(label.to_owned(), gen as Box<Generator: Send>);
 	}
 
 	///Convenience method for setting a condition.
@@ -174,11 +174,11 @@ impl fmt::Show for Template {
 
 ///A trait for content generators.
 pub trait Generator {
-	fn generate(&self, args: &[~str]) -> ~fmt::Show;
+	fn generate(&self, args: &[~str]) -> Box<fmt::Show>;
 }
 
-impl Generator for fn(args: &[~str]) -> ~fmt::Show {
-	fn generate(&self, args: &[~str]) -> ~fmt::Show {
+impl Generator for fn(args: &[~str]) -> Box<fmt::Show> {
+	fn generate(&self, args: &[~str]) -> Box<fmt::Show> {
 		(*self)(args)
 	}
 }
@@ -189,6 +189,10 @@ mod test {
 	use super::{Template, Placeholder, String};
 	use std::fmt::Show;
 
+
+	static peter: &'static str = "Peter";
+	static nice: &'static str = "nice";
+
 	fn monitored_from_str(s: &str) -> Template {
 		match Template::from_chars(&mut s.chars()) {
 			Ok(template) => template,
@@ -196,8 +200,8 @@ mod test {
 		}
 	}
 
-	fn echo(parts: &[~str]) -> ~Show {
-		~(parts.connect(":")) as ~Show
+	fn echo(parts: &[~str]) -> Box<Show> {
+		(box parts.connect(":")) as Box<Show>
 	}
 
 	#[test]
@@ -218,7 +222,7 @@ mod test {
 
 	#[test]
 	fn escaped_tokens() {
-		let template: Template = monitored_from_str("Hello, [[:name]]! Write placeholders like \\[[:this]] and escape them like \\\\\\[[:this]]");
+		let template = monitored_from_str("Hello, [[:name]]! Write placeholders like \\[[:this]] and escape them like \\\\\\[[:this]]");
 		assert_eq!(template.tokens.get(0), &String("Hello, ".to_owned()));
 		assert_eq!(template.tokens.get(1), &Placeholder("name".to_owned()));
 		assert_eq!(template.tokens.get(2), &String("! Write placeholders like [[:this]] and escape them like \\[[:this]]".to_owned()));
@@ -226,18 +230,18 @@ mod test {
 
 	#[test]
 	fn replacement() {
-		let mut template: Template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
-		template.insert("name", ~("Peter"));
-		template.insert("something", ~("nice"));
+		let mut template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
+		template.insert("name", box peter);
+		template.insert("something", box nice);
 		assert_eq!(template.to_str(), "Hello, Peter! This is a nice template.".to_owned());
 	}
 
 	#[test]
 	fn templates_in_templates() {
-		let mut template1: Template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
-		let mut template2: ~Template = ~monitored_from_str("really [[:something]]");
-		template1.insert("name", ~("Peter"));
-		template2.insert("something", ~("nice"));
+		let mut template1 = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
+		let mut template2 = box monitored_from_str("really [[:something]]");
+		template1.insert("name", box peter);
+		template2.insert("something", box nice);
 
 		template1.insert("something", template2);
 
@@ -246,8 +250,8 @@ mod test {
 
 	#[test]
 	fn conditional() {
-		let mut template: Template = monitored_from_str("Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]");
-		template.insert("name", ~("Peter"));
+		let mut template = monitored_from_str("Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]");
+		template.insert("name", box peter);
 		assert_eq!(template.to_str(), "Hello, Peter!".to_owned());
 		template.set("condition", true);
 		assert_eq!(template.to_str(), "Hello, Peter! The condition is true.".to_owned());
@@ -255,8 +259,8 @@ mod test {
 
 	#[test]
 	fn conditional_switch() {
-		let mut template: Template = monitored_from_str("Hello, [[:name]]! The condition is [[?condition]]true[[/condition]][[?!condition]]false[[/condition]].");
-		template.insert("name", ~("Peter"));
+		let mut template = monitored_from_str("Hello, [[:name]]! The condition is [[?condition]]true[[/condition]][[?!condition]]false[[/condition]].");
+		template.insert("name", box peter);
 		assert_eq!(template.to_str(), "Hello, Peter! The condition is false.".to_owned());
 		template.set("condition", true);
 		assert_eq!(template.to_str(), "Hello, Peter! The condition is true.".to_owned());
@@ -264,16 +268,16 @@ mod test {
 
 	#[test]
 	fn content_conditional() {
-		let mut template: Template = monitored_from_str("Hello[[?:name]], [[:name]][[/name]]![[?!:name]] I don't know you.[[/!name]]");
+		let mut template = monitored_from_str("Hello[[?:name]], [[:name]][[/name]]![[?!:name]] I don't know you.[[/!name]]");
 		assert_eq!(template.to_str(), "Hello! I don't know you.".to_owned());
-		template.insert("name", ~("Peter"));
+		template.insert("name", box peter);
 		assert_eq!(template.to_str(), "Hello, Peter!".to_owned());
 	}
 
 	#[test]
 	fn generator() {
-		let mut template: Template = monitored_from_str("[[+\"say hello\" hello Peter    \"how are\" you?]]");
-		template.insert_generator("say hello", ~echo);
+		let mut template = monitored_from_str("[[+\"say hello\" hello Peter    \"how are\" you?]]");
+		template.insert_generator("say hello", box echo);
 
 		assert_eq!(template.to_str(), "hello:Peter:how are:you?".to_owned());
 	}

@@ -38,8 +38,9 @@ fn main() {
 	let mut template = Template::from_buffer(&mut BufferedReader::new(file));
 
 	//Insert something into the `name` placeholder
-	//The ~(...) pattern is currently necessary because of how the compiler handles ~str
-	template.insert("name", ~("Peter"));
+	//The separate variable is currently necessary because of how the compiler handles `box str`
+	let name = "Peter"
+	template.insert("name", box name);
 
 	//Templates can be printed as they are
 	//Result: 'Hello, Peter!'
@@ -56,8 +57,9 @@ fn main() {
 	let mut template: Template = from_str("Hello, [[:name]]!").unwrap();
 
 	//Insert something into the `name` placeholder
-	//The ~(...) pattern is currently necessary because of how the compiler handles ~str
-	template.insert("name", ~("Peter"));
+	//The separate variable is currently necessary because of how the compiler handles `box str`
+	let name = "Peter"
+	template.insert("name", box name);
 
 	//Templates can be printed as they are
 	//Result: 'Hello, Peter!'
@@ -78,8 +80,9 @@ fn main() {
 	let mut template: Template = from_str("Hello, [[:name]]! Write placeholders like \\[[:this]] and escape them like \\\\\\[[:this]]").unwrap();
 
 	//Insert something into the `name` placeholder
-	//The ~(...) pattern is currently necessary because of how the compiler handles ~str
-	template.insert("name", ~("Peter"));
+	//The separate variable is currently necessary because of how the compiler handles `box str`
+	let name = "Peter"
+	template.insert("name", box name);
 
 	//Templates can be printed as they are
 	//Result: 'Hello, Peter! Write placeholders like [[:this]] and escape them like \[[:this]]'
@@ -103,8 +106,9 @@ fn main() {
 	let mut template: Template = from_str("Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]").unwrap();
 
 	//Insert something into the `name` placeholder
-	//The ~(...) pattern is currently necessary because of how the compiler handles ~str
-	template.insert("name", ~("Peter"));
+	//The separate variable is currently necessary because of how the compiler handles `box str`
+	let name = "Peter"
+	template.insert("name", box name);
 
 	//Conditions are false by default, so the second sentence will be disabled
 	//Result: 'Hello, Peter!'
@@ -132,8 +136,8 @@ use fragments::Template;
 
 //This function will just concatenate the arguments.
 //I expect you to make cooler generators, yourself ;)
-fn join(parts: &[~str]) -> ~Show {
-	~(parts.concat()) as ~Show
+fn join(parts: &[~str]) -> Box<Show> {
+	~(parts.concat()) as Box<Show>
 }
 
 
@@ -142,11 +146,12 @@ fn main() {
 	let mut template: Template = from_str("Hello, [[:name]]! Is it written as 'white space' or '[[+join white space]]'?").unwrap();
 
 	//Insert something into the `name` placeholder
-	//The ~(...) pattern is currently necessary because of how the compiler handles ~str
-	template.insert("name", ~("Peter"));
+	//The separate variable is currently necessary because of how the compiler handles `box str`
+	let name = "Peter"
+	template.insert("name", box name);
 
-	//Functions with the signature `fn(&[~str]) -> ~Show` will automatically implement the `Generator` trait
-	template.insert_generator("join", ~join);
+	//Functions with the signature `fn(&[~str]) -> Box<Show>` will automatically implement the `Generator` trait
+	template.insert_generator("join", box join);
 
 	//Result: "Hello, Peter! Is it written as 'white space' or 'whitespace'?"
 	println!("Result: '{}'", template);
