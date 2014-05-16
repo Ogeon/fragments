@@ -112,7 +112,7 @@ impl Template {
 	fn format_tokens(&self, tokens: &Vec<Token>, f: &mut fmt::Formatter) -> fmt::Result {
 		for token in tokens.iter() {
 			let res = match token {
-				&String(ref s) => f.buf.write_str(*s),
+				&String(ref s) => f.write(s.as_bytes()),
 
 				&Placeholder(ref k) => {
 					match self.content.find(k) {
