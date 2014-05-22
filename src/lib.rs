@@ -18,11 +18,11 @@ mod parser;
 
 #[deriving(Eq, TotalEq, Show)]
 enum Token {
-	String(~str),
-	Placeholder(~str),
-	Conditional(~str, bool, Vec<Token>),
-	ContentConditional(~str, bool, Vec<Token>),
-	Generated(~str, Vec<~str>)
+	String(StrBuf),
+	Placeholder(StrBuf),
+	Conditional(StrBuf, bool, Vec<Token>),
+	ContentConditional(StrBuf, bool, Vec<Token>),
+	Generated(StrBuf, Vec<StrBuf>)
 }
 
 ///A string template with placeholders and conditional content.
@@ -49,19 +49,19 @@ enum Token {
 ///rest of the content.
 pub struct Template {
 	///Content for the placeholders
-	pub content: HashMap<~str, Box<fmt::Show: Send>>,
+	pub content: HashMap<StrBuf, Box<fmt::Show: Send>>,
 	///Content generators
-	pub generators: HashMap<~str, Box<Generator: Send>>,
+	pub generators: HashMap<StrBuf, Box<Generator: Send>>,
 	///Conditional switches
-	pub conditions: HashSet<~str>,
+	pub conditions: HashSet<StrBuf>,
 	tokens: Vec<Token>
 }
 
 impl Template {
 	///Create a new `Template` from a character iterator.
 	#[inline]
-	pub fn from_chars(b: &mut std::str::Chars) -> Result<Template, ~str> {
-		let tokens = try!(parser::parse(&mut b.map(|r| Ok::<char, ~str>(r))));
+	pub fn from_chars(b: &mut std::str::Chars) -> Result<Template, StrBuf> {
+		let tokens = try!(parser::parse(&mut b.map(|r| Ok::<char, StrBuf>(r))));
 
 		Ok(Template {
 			content: HashMap::new(),
@@ -73,10 +73,10 @@ impl Template {
 
 	///Create a new `Template` from a buffer.
 	#[inline]
-	pub fn from_buffer<T: Buffer>(b: &mut T) -> Result<Template, ~str> {
+	pub fn from_buffer<T: Buffer>(b: &mut T) -> Result<Template, StrBuf> {
 		let tokens = try!(parser::parse(&mut b.chars().map(|r| match r {
 			Ok(c) => Ok(c),
-			Err(e) => Err(format!("io error: {}", e))
+			Err(e) => Err(format_strbuf!("io error: {}", e))
 		})));
 
 		Ok(Template {
@@ -90,22 +90,22 @@ impl Template {
 	///Convenience method for inserting content.
 	#[inline]
 	pub fn insert<T: fmt::Show + Send>(&mut self, label: &str, item: Box<T>) {
-		self.content.insert(label.to_owned(), item as Box<fmt::Show: Send>);
+		self.content.insert(label.into_strbuf(), item as Box<fmt::Show: Send>);
 	}
 
 	///Convenience method for inserting generators.
 	#[inline]
 	pub fn insert_generator<T: Generator + Send>(&mut self, label: &str, gen: Box<T>) {
-		self.generators.insert(label.to_owned(), gen as Box<Generator: Send>);
+		self.generators.insert(label.into_strbuf(), gen as Box<Generator: Send>);
 	}
 
 	///Convenience method for setting a condition.
 	#[inline]
 	pub fn set(&mut self, label: &str, value: bool) {
 		if value {
-			self.conditions.insert(label.to_owned());
+			self.conditions.insert(label.into_strbuf());
 		} else {
-			self.conditions.remove(&label.to_owned());
+			self.conditions.remove(&label.into_strbuf());
 		}
 	}
 
@@ -139,7 +139,7 @@ impl Template {
 
 				&Generated(ref k, ref vars) => {
 					match self.generators.find(k) {
-						Some(gen) => gen.generate(vars.as_slice()).fmt(f),
+						Some(gen) => gen.generate(vars).fmt(f),
 						None => Ok(())
 					}
 				}
@@ -174,11 +174,11 @@ impl fmt::Show for Template {
 
 ///A trait for content generators.
 pub trait Generator {
-	fn generate(&self, args: &[~str]) -> Box<fmt::Show>;
+	fn generate(&self, args: &Vec<StrBuf>) -> Box<fmt::Show>;
 }
 
-impl Generator for fn(args: &[~str]) -> Box<fmt::Show> {
-	fn generate(&self, args: &[~str]) -> Box<fmt::Show> {
+impl Generator for fn(args: &Vec<StrBuf>) -> Box<fmt::Show> {
+	fn generate(&self, args: &Vec<StrBuf>) -> Box<fmt::Show> {
 		(*self)(args)
 	}
 }
@@ -200,18 +200,18 @@ mod test {
 		}
 	}
 
-	fn echo(parts: &[~str]) -> Box<Show> {
+	fn echo(parts: &Vec<StrBuf>) -> Box<Show> {
 		(box parts.connect(":")) as Box<Show>
 	}
 
 	#[test]
 	fn basic_tokens() {
 		let template: Template = from_str("Hello, [[:name]]! This is a [[:something]] template.").unwrap();
-		assert_eq!(template.tokens.get(0), &String("Hello, ".to_owned()));
-		assert_eq!(template.tokens.get(1), &Placeholder("name".to_owned()));
-		assert_eq!(template.tokens.get(2), &String("! This is a ".to_owned()));
-		assert_eq!(template.tokens.get(3), &Placeholder("something".to_owned()));
-		assert_eq!(template.tokens.get(4), &String(" template.".to_owned()));
+		assert_eq!(template.tokens.get(0), &String("Hello, ".into_strbuf()));
+		assert_eq!(template.tokens.get(1), &Placeholder("name".into_strbuf()));
+		assert_eq!(template.tokens.get(2), &String("! This is a ".into_strbuf()));
+		assert_eq!(template.tokens.get(3), &Placeholder("something".into_strbuf()));
+		assert_eq!(template.tokens.get(4), &String(" template.".into_strbuf()));
 	}
 
 	#[test]
@@ -223,9 +223,9 @@ mod test {
 	#[test]
 	fn escaped_tokens() {
 		let template = monitored_from_str("Hello, [[:name]]! Write placeholders like \\[[:this]] and escape them like \\\\\\[[:this]]");
-		assert_eq!(template.tokens.get(0), &String("Hello, ".to_owned()));
-		assert_eq!(template.tokens.get(1), &Placeholder("name".to_owned()));
-		assert_eq!(template.tokens.get(2), &String("! Write placeholders like [[:this]] and escape them like \\[[:this]]".to_owned()));
+		assert_eq!(template.tokens.get(0), &String("Hello, ".into_strbuf()));
+		assert_eq!(template.tokens.get(1), &Placeholder("name".into_strbuf()));
+		assert_eq!(template.tokens.get(2), &String("! Write placeholders like [[:this]] and escape them like \\[[:this]]".into_strbuf()));
 	}
 
 	#[test]

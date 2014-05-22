@@ -16,6 +16,47 @@ enum LexToken {
 	Character(char)
 }
 
+impl LexToken {
+	fn push_to_buf(&self, buf: &mut StrBuf) {
+		match *self {
+			Begin => {
+				buf.push_char('[');
+				buf.push_char('[');
+			},
+			End => {
+				buf.push_char(']');
+				buf.push_char(']');
+			},
+			Colon => buf.push_char(':'),
+			Questionmark => buf.push_char('?'),
+			Exclamation => buf.push_char('!'),
+			Plus => buf.push_char('+'),
+			Slash => buf.push_char('/'),
+			Quote => buf.push_char('"'),
+			Character(c) => buf.push_char(c)
+		}
+	}
+}
+
+impl fmt::Show for LexToken {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		match *self {
+			Begin => {
+				'['.fmt(f).and_then(|_| '['.fmt(f))
+			},
+			End => ']'.fmt(f).and_then(|_| ']'.fmt(f)),
+			Colon => ':'.fmt(f),
+			Questionmark => '?'.fmt(f),
+			Exclamation => '!'.fmt(f),
+			Plus => '+'.fmt(f),
+			Slash => '/'.fmt(f),
+			Quote => '"'.fmt(f),
+			Character(c) => c.fmt(f)
+		}
+	}
+}
+
+
 struct Parser<T, V> {
     tokens: Peekable<V, T>
 }
@@ -65,30 +106,14 @@ impl<T: Iterator<V>, V> Iterator<V> for Parser<T, V> {
 	}
 }
 
-impl fmt::Show for LexToken {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		match *self {
-			Begin => "[[".fmt(f),
-			End => "]]".fmt(f),
-			Colon => ":".fmt(f),
-			Questionmark => "?".fmt(f),
-			Exclamation => "!".fmt(f),
-			Plus => "+".fmt(f),
-			Slash => "/".fmt(f),
-			Quote => "\"".fmt(f),
-			Character(c) => c.fmt(f)
-		}
-	}
-}
-
-pub fn parse<T: Iterator<Result<char, ~str>>>(chars: &mut T) -> Result<Vec<Token>, ~str> {
+pub fn parse<T: Iterator<Result<char, StrBuf>>>(chars: &mut T) -> Result<Vec<Token>, StrBuf> {
 	let tokens = try!(lex(chars));
 	parse_block(&mut Parser{
 		tokens: tokens.move_iter().by_ref().peekable()
 	})
 }
 
-fn lex<T: Iterator<Result<char, ~str>>>(chars: &mut T) -> Result<Vec<LexToken>, ~str> {
+fn lex<T: Iterator<Result<char, StrBuf>>>(chars: &mut T) -> Result<Vec<LexToken>, StrBuf> {
 	let mut chars = chars.by_ref().peekable();
 	let mut tokens = Vec::new();
 
@@ -119,7 +144,7 @@ fn lex<T: Iterator<Result<char, ~str>>>(chars: &mut T) -> Result<Vec<LexToken>, 
 					Some(Ok(c)) => {
 						tokens.push(Character(c));
 					},
-					Some(Err(e)) => return Err(e.to_str()),
+					Some(Err(e)) => return Err(e.into_strbuf()),
 					None => break
 				},
 				c => tokens.push(Character(c))
@@ -132,7 +157,7 @@ fn lex<T: Iterator<Result<char, ~str>>>(chars: &mut T) -> Result<Vec<LexToken>, 
 	Ok(tokens)
 }
 
-fn parse_block<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) -> Result<Vec<Token>, ~str> {
+fn parse_block<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) -> Result<Vec<Token>, StrBuf> {
 	let mut result = Vec::new();
 	let mut string = StrBuf::new();
 
@@ -141,7 +166,7 @@ fn parse_block<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) -> Resul
 			Some(Begin) => match tokens.next() {
 				Some(Colon) => {
 					if string.len() > 0 {
-						result.push(String(string.into_owned()));
+						result.push(String(string));
 						string = StrBuf::new();
 					}
 
@@ -149,7 +174,7 @@ fn parse_block<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) -> Resul
 				},
 				Some(Questionmark) => {
 					if string.len() > 0 {
-						result.push(String(string.into_owned()));
+						result.push(String(string));
 						string = StrBuf::new();
 					}
 
@@ -157,7 +182,7 @@ fn parse_block<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) -> Resul
 				},
 				Some(Plus) => {
 					if string.len() > 0 {
-						result.push(String(string.into_owned()));
+						result.push(String(string));
 						string = StrBuf::new();
 					}
 
@@ -165,7 +190,7 @@ fn parse_block<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) -> Resul
 				},
 				Some(Slash) => {
 					if string.len() > 0 {
-						result.push(String(string.into_owned()));
+						result.push(String(string));
 						string = StrBuf::new();
 					}
 
@@ -173,64 +198,64 @@ fn parse_block<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) -> Resul
 					break
 				},
 				Some(t) => {
-					return Err(format!("parse error: unknown token type: '{}'", t))
+					return Err(format_strbuf!("parse error: unknown token type: '{}'", t))
 				},
-				None => string.push_str(Begin.to_str())
+				None => Begin.push_to_buf(&mut string)
 			},
-			Some(t) => string.push_str(t.to_str()),
+			Some(t) => t.push_to_buf(&mut string),
 			None => break
 		}
 	}
 
 	if string.len() > 0 {
-		result.push(String(string.into_owned()));
+		result.push(String(string));
 	}
 
 	Ok(result)
 }
 
-fn parse_placeholder<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) -> Result<Token, ~str> {
+fn parse_placeholder<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) -> Result<Token, StrBuf> {
 	let mut label = StrBuf::new();
 
-	for t in tokens.by_ref().take_while(|&t| t != End).map(|t| t.to_str()) {
-		label.push_str(t.to_str());
+	for t in tokens.by_ref().take_while(|&t| t != End) {
+		t.push_to_buf(&mut label);
 	}
 
-	Ok(Placeholder(label.into_owned()))
+	Ok(Placeholder(label))
 }
 
-fn parse_conditional<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) -> Result<Token, ~str> {
+fn parse_conditional<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) -> Result<Token, StrBuf> {
 	let negative = tokens.eat(Exclamation);
 	let content_cond = tokens.eat(Colon);
 	let mut label = StrBuf::new();
 
-	for t in tokens.by_ref().take_while(|&t| t != End).map(|t| t.to_str()) {
-		label.push_str(t.to_str());
+	for t in tokens.by_ref().take_while(|&t| t != End) {
+		t.push_to_buf(&mut label);
 	}
 
 	let content = try!(parse_block(tokens));
 
 	if content_cond {
-		Ok(ContentConditional(label.into_owned(), !negative, content))
+		Ok(ContentConditional(label, !negative, content))
 	} else {
-		Ok(Conditional(label.into_owned(), !negative, content))
+		Ok(Conditional(label, !negative, content))
 	}
 }
 
-fn parse_generator<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) -> Result<Token, ~str> {
+fn parse_generator<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) -> Result<Token, StrBuf> {
 	let mut label = StrBuf::new();
 	let mut args = Vec::new();
 
 	if tokens.eat(Quote) {
-		for t in tokens.by_ref().take_while(|&t| t != Quote).map(|t| t.to_str()) {
-			label.push_str(t.to_str());
+		for t in tokens.by_ref().take_while(|&t| t != Quote) {
+			t.push_to_buf(&mut label);
 		}
 	} else {
 		loop {
 			match tokens.next() {
-				Some(End) => return Ok(Generated(label.into_owned(), Vec::new())),
+				Some(End) => return Ok(Generated(label, Vec::new())),
 				Some(Character(c)) if c.is_whitespace() => break,
-				Some(t) => label.push_str(t.to_str()),
+				Some(t) => t.push_to_buf(&mut label),
 				None => break
 			}
 		}
@@ -242,31 +267,31 @@ fn parse_generator<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) -> R
 		tokens.eat_while(|&t| match t {Character(c) if c.is_whitespace() => true, _ => false});
 
 		if tokens.eat(Quote) {
-			for t in tokens.by_ref().take_while(|&t| t != Quote).map(|t| t.to_str()) {
-				new_arg.push_str(t.to_str());
+			for t in tokens.by_ref().take_while(|&t| t != Quote) {
+				t.push_to_buf(&mut new_arg);
 			}
 		} else {
 			'arg: loop {
 				match tokens.next() {
 					Some(End) => if new_arg.len() > 0 {
-						args.push(new_arg.into_owned());
+						args.push(new_arg);
 						break 'arg_list;
 					},
 					Some(Character(c)) if c.is_whitespace() => {
 						tokens.eat_while(|&t| match t {Character(c) if c.is_whitespace() => true, _ => false});
 						break 'arg
 					},
-					Some(t) => new_arg.push_str(t.to_str()),
+					Some(t) => t.push_to_buf(&mut new_arg),
 					None => break 'arg_list
 				}
 			}
 		}
 
-		args.push(new_arg.into_owned());
+		args.push(new_arg);
 	}
 	
 
-	Ok(Generated(label.into_owned(), args))
+	Ok(Generated(label, args))
 }
 
 fn parse_block_end<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) {
