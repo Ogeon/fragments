@@ -3,7 +3,7 @@ fragments
 
 [![Build Status](https://travis-ci.org/Ogeon/fragments.png?branch=master)](https://travis-ci.org/Ogeon/fragments)
 
-A simple template library for Rust with support for placeholders and conditional content.
+A template library for Rust with support for placeholders, conditional content and content generators.
 
 Online documentation can be found [here](http://www.rust-ci.org/Ogeon/fragments/doc/fragments/).
 
@@ -38,9 +38,7 @@ fn main() {
 	let mut template = Template::from_buffer(&mut BufferedReader::new(file));
 
 	//Insert something into the `name` placeholder
-	//The separate variable is currently necessary because of how the compiler handles `box str`
-	let name = "Peter"
-	template.insert("name", box name);
+	template.insert("name", "Peter");
 
 	//Templates can be printed as they are
 	//Result: 'Hello, Peter!'
@@ -57,9 +55,7 @@ fn main() {
 	let mut template: Template = from_str("Hello, [[:name]]!").unwrap();
 
 	//Insert something into the `name` placeholder
-	//The separate variable is currently necessary because of how the compiler handles `box str`
-	let name = "Peter"
-	template.insert("name", box name);
+	template.insert("name", "Peter");
 
 	//Templates can be printed as they are
 	//Result: 'Hello, Peter!'
@@ -80,9 +76,7 @@ fn main() {
 	let mut template: Template = from_str("Hello, [[:name]]! Write placeholders like \\[[:this]] and escape them like \\\\\\[[:this]]").unwrap();
 
 	//Insert something into the `name` placeholder
-	//The separate variable is currently necessary because of how the compiler handles `box str`
-	let name = "Peter"
-	template.insert("name", box name);
+	template.insert("name", "Peter");
 
 	//Templates can be printed as they are
 	//Result: 'Hello, Peter! Write placeholders like [[:this]] and escape them like \[[:this]]'
@@ -106,9 +100,7 @@ fn main() {
 	let mut template: Template = from_str("Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]").unwrap();
 
 	//Insert something into the `name` placeholder
-	//The separate variable is currently necessary because of how the compiler handles `box str`
-	let name = "Peter"
-	template.insert("name", box name);
+	template.insert("name", "Peter");
 
 	//Conditions are false by default, so the second sentence will be disabled
 	//Result: 'Hello, Peter!'
@@ -136,7 +128,7 @@ use fragments::Template;
 
 //This function will just concatenate the arguments.
 //I expect you to make cooler generators, yourself ;)
-fn join(parts: &[~str]) -> Box<Show> {
+fn join(parts: &Vec<StrBuf>) -> Box<Show> {
 	~(parts.concat()) as Box<Show>
 }
 
@@ -146,12 +138,10 @@ fn main() {
 	let mut template: Template = from_str("Hello, [[:name]]! Is it written as 'white space' or '[[+join white space]]'?").unwrap();
 
 	//Insert something into the `name` placeholder
-	//The separate variable is currently necessary because of how the compiler handles `box str`
-	let name = "Peter"
-	template.insert("name", box name);
+	template.insert("name", "Peter");
 
-	//Functions with the signature `fn(&[~str]) -> Box<Show>` will automatically implement the `Generator` trait
-	template.insert_generator("join", box join);
+	//Functions with the signature `fn(&Vec<StrBuf>) -> Box<Show>` will automatically implement the `Generator` trait
+	template.insert_generator("join", join);
 
 	//Result: "Hello, Peter! Is it written as 'white space' or 'whitespace'?"
 	println!("Result: '{}'", template);

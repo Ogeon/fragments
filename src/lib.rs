@@ -7,9 +7,12 @@
 
 #![doc(html_root_url = "http://www.rust-ci.org/Ogeon/fragments/doc/")]
 
+#![feature(macro_rules)]
+
 extern crate collections;
 
 use std::fmt;
+use std::fmt::Show;
 use std::from_str::FromStr;
 use std::vec::Vec;
 use collections::hashmap::{HashMap, HashSet};
@@ -25,6 +28,169 @@ enum Token {
 	Generated(StrBuf, Vec<StrBuf>)
 }
 
+///Container enum for template content
+pub enum ContentType {
+	Float(f64, Option<uint>), ///A float with an optional precision
+	Int(i64),
+	UnsignedInt(u64),
+	Char(char),
+	Bool(bool),
+	Str(StrBuf),
+	StaticStr(&'static str),
+	Template(Template),
+	Show(Box<fmt::Show>)
+}
+
+macro_rules! call_fmt(
+	($($p:pat => $b:expr),+ and $($t:ident),+) => (
+		match self {
+			$($p => $b,)+
+			$(&$t(ref v) => v.fmt(f)),+
+		}
+	)
+)
+
+impl fmt::Show for ContentType {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		call_fmt! {
+			&Float(v, p) => {
+				let prev_p = f.precision;
+				f.precision = p;
+				let result = (&v as &fmt::Float).fmt(f);
+				f.precision = prev_p;
+				result
+			}
+			
+			and
+
+			Int,
+			UnsignedInt,
+			Char,
+			Bool,
+			Str,
+			StaticStr,
+			Template,
+			Show
+		}
+	}
+}
+
+
+///A trait for types that can be inserted into templates
+trait TemplateContent {
+	///Convert `self` to a suitable `ContentType` variant, not making a copy if possible.
+	fn into_template_content(self) -> ContentType;
+}
+
+///A trait for types that can be copied and inserted into templates
+trait CopyTemplateContent {
+	///Copy and convert `self` to a suitable `ContentType` variant.
+	fn to_template_content(&self) -> ContentType;
+}
+
+macro_rules! float_content(
+	($($t:ty),+) => (
+		$(impl TemplateContent for $t {
+			fn into_template_content(self) -> ContentType {
+				Float(self as f64, None)
+			}
+		}
+
+		impl CopyTemplateContent for $t {
+			fn to_template_content(&self) -> ContentType {
+				Float(*self as f64, None)
+			}
+		})+
+	)
+)
+
+macro_rules! int_content(
+	($($t:ty),+) => (
+		$(impl TemplateContent for $t {
+			fn into_template_content(self) -> ContentType {
+				Int(self as i64)
+			}
+		}
+
+		impl CopyTemplateContent for $t {
+			fn to_template_content(&self) -> ContentType {
+				Int(*self as i64)
+			}
+		})+
+	)
+)
+
+macro_rules! uint_content(
+	($($t:ty),+) => (
+		$(impl TemplateContent for $t {
+			fn into_template_content(self) -> ContentType {
+				UnsignedInt(self as u64)
+			}
+		}
+
+		impl CopyTemplateContent for $t {
+			fn to_template_content(&self) -> ContentType {
+				UnsignedInt(*self as u64)
+			}
+		})+
+	)
+)
+
+macro_rules! deref_content(
+	($([$t:ty, $i:ident]),+) => (
+		$(impl TemplateContent for $t {
+			fn into_template_content(self) -> ContentType {
+				$i(self)
+			}
+		}
+
+		impl CopyTemplateContent for $t {
+			fn to_template_content(&self) -> ContentType {
+				$i(*self)
+			}
+		})+
+	)
+)
+
+float_content!(f32, f64)
+int_content!(int, i8, i16, i32, i64)
+uint_content!(uint, u8, u16, u32, u64)
+deref_content!([char, Char], [bool, Bool], [&'static str, StaticStr])
+
+
+impl TemplateContent for StrBuf {
+	fn into_template_content(self) -> ContentType {
+		Str(self)
+	}
+}
+
+impl CopyTemplateContent for StrBuf {
+	fn to_template_content(&self) -> ContentType {
+		Str(self.clone())
+	}
+}
+
+
+impl TemplateContent for Template {
+	fn into_template_content(self) -> ContentType {
+		Template(self)
+	}
+}
+
+
+impl TemplateContent for Box<Show> {
+	fn into_template_content(self) -> ContentType {
+		Show(self)
+	}
+}
+
+
+impl TemplateContent for ContentType {
+	fn into_template_content(self) -> ContentType {
+		self
+	}
+}
+
 ///A string template with placeholders and conditional content.
 ///
 ///Placeholders are written as `[[:label]]`, where `label` becomes the name of the placeholder.
@@ -36,7 +202,7 @@ enum Token {
 ///and they are used to display content depending on whether its label exists in the `conditions` set.
 ///`[[/]]` marks the end of a block and may contain other characters after the `/`, which may be useful for labeling the end mark.
 ///Conditions can be made negative by writing `[[?!label]]...[[/]]`, which makes the content visible if the label
-///is missing from the `conditions` set. Conditional segments can also depend on whether a placeholder has an assgined value. 
+///is missing from the `conditions` set. Conditional segments can also depend on whether a placeholder has an assigned value. 
 ///Just write them like this: `[[?:label]]...[[/]]` or `[[?!:label]]...[[/]]`.
 ///
 ///Content can also be generated, using a generator token: `[[+label arg1 arg2 ...]]`. The label and the arguments are
@@ -49,9 +215,9 @@ enum Token {
 ///rest of the content.
 pub struct Template {
 	///Content for the placeholders
-	pub content: HashMap<StrBuf, Box<fmt::Show: Send>>,
+	pub content: HashMap<StrBuf, ContentType>,
 	///Content generators
-	pub generators: HashMap<StrBuf, Box<Generator: Send>>,
+	pub generators: HashMap<StrBuf, Box<Generator>>,
 	///Conditional switches
 	pub conditions: HashSet<StrBuf>,
 	tokens: Vec<Token>
@@ -87,21 +253,27 @@ impl Template {
 		})
 	}
 
-	///Convenience method for inserting content.
+	///Insert content.
 	#[inline]
-	pub fn insert<T: fmt::Show + Send>(&mut self, label: &str, item: Box<T>) {
-		self.content.insert(label.into_strbuf(), item as Box<fmt::Show: Send>);
+	pub fn insert<S: StrAllocating, T: TemplateContent>(&mut self, label: S, item: T) {
+		self.content.insert(label.into_strbuf(), item.into_template_content());
 	}
 
-	///Convenience method for inserting generators.
+	///Insert a formatted float.
 	#[inline]
-	pub fn insert_generator<T: Generator + Send>(&mut self, label: &str, gen: Box<T>) {
-		self.generators.insert(label.into_strbuf(), gen as Box<Generator: Send>);
+	pub fn insert_float<S: StrAllocating>(&mut self, label: S, item: f64, precision: uint) {
+		self.content.insert(label.into_strbuf(), Float(item, Some(precision)));
 	}
 
-	///Convenience method for setting a condition.
+	///Insert a content generator.
 	#[inline]
-	pub fn set(&mut self, label: &str, value: bool) {
+	pub fn insert_generator<S: StrAllocating, T: Generator + Send>(&mut self, label: S, gen: T) {
+		self.generators.insert(label.into_strbuf(), box gen as Box<Generator>);
+	}
+
+	///Set a condition.
+	#[inline]
+	pub fn set<S: StrAllocating>(&mut self, label: S, value: bool) {
 		if value {
 			self.conditions.insert(label.into_strbuf());
 		} else {
@@ -189,6 +361,18 @@ mod test {
 	use super::{Template, Placeholder, String};
 	use std::fmt::Show;
 
+	macro_rules! test_insert(
+		($($v:expr),+) => (
+			#[test]
+			fn test_insert() {
+				let mut template: Template = monitored_from_str("[[:v]]");
+				$(
+					template.insert("v", $v);
+					assert_eq!(template.to_str(), $v.to_str());
+				)+
+			}
+		)
+	)
 
 	static peter: &'static str = "Peter";
 	static nice: &'static str = "nice";
@@ -231,17 +415,17 @@ mod test {
 	#[test]
 	fn replacement() {
 		let mut template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
-		template.insert("name", box peter);
-		template.insert("something", box nice);
+		template.insert("name", peter);
+		template.insert("something", nice);
 		assert_eq!(template.to_str(), "Hello, Peter! This is a nice template.".to_owned());
 	}
 
 	#[test]
 	fn templates_in_templates() {
 		let mut template1 = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
-		let mut template2 = box monitored_from_str("really [[:something]]");
-		template1.insert("name", box peter);
-		template2.insert("something", box nice);
+		let mut template2 = monitored_from_str("really [[:something]]");
+		template1.insert("name", peter);
+		template2.insert("something", nice);
 
 		template1.insert("something", template2);
 
@@ -251,7 +435,7 @@ mod test {
 	#[test]
 	fn conditional() {
 		let mut template = monitored_from_str("Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]");
-		template.insert("name", box peter);
+		template.insert("name", peter);
 		assert_eq!(template.to_str(), "Hello, Peter!".to_owned());
 		template.set("condition", true);
 		assert_eq!(template.to_str(), "Hello, Peter! The condition is true.".to_owned());
@@ -260,7 +444,7 @@ mod test {
 	#[test]
 	fn conditional_switch() {
 		let mut template = monitored_from_str("Hello, [[:name]]! The condition is [[?condition]]true[[/condition]][[?!condition]]false[[/condition]].");
-		template.insert("name", box peter);
+		template.insert("name", peter);
 		assert_eq!(template.to_str(), "Hello, Peter! The condition is false.".to_owned());
 		template.set("condition", true);
 		assert_eq!(template.to_str(), "Hello, Peter! The condition is true.".to_owned());
@@ -270,15 +454,26 @@ mod test {
 	fn content_conditional() {
 		let mut template = monitored_from_str("Hello[[?:name]], [[:name]][[/name]]![[?!:name]] I don't know you.[[/!name]]");
 		assert_eq!(template.to_str(), "Hello! I don't know you.".to_owned());
-		template.insert("name", box peter);
+		template.insert("name", peter);
 		assert_eq!(template.to_str(), "Hello, Peter!".to_owned());
 	}
 
 	#[test]
 	fn generator() {
 		let mut template = monitored_from_str("[[+\"say hello\" hello Peter    \"how are\" you?]]");
-		template.insert_generator("say hello", box echo);
+		template.insert_generator("say hello", echo);
 
 		assert_eq!(template.to_str(), "hello:Peter:how are:you?".to_owned());
 	}
+
+	#[test]
+	fn format_float() {
+		let mut template = monitored_from_str("[[:short]], [[:long]], [[:default]]");
+		template.insert_float("short", 1.2, 1);
+		template.insert_float("long", 1.2, 4);
+		template.insert("default", 1.2);
+		assert_eq!(template.to_str(), "1.2, 1.2000, 1.2".to_owned())
+	}
+
+	test_insert!(1u8, 1u16, 1u32, 1u64, 1i8, 1i16, 1i32, 1i64, 'A', true, false)
 }
