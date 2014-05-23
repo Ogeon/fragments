@@ -385,7 +385,7 @@ mod test {
 	}
 
 	fn echo(parts: &Vec<StrBuf>) -> Box<Show> {
-		(box parts.connect(":")) as Box<Show>
+		box parts.connect(":") as Box<Show>
 	}
 
 	#[test]
@@ -417,7 +417,7 @@ mod test {
 		let mut template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
 		template.insert("name", peter);
 		template.insert("something", nice);
-		assert_eq!(template.to_str(), "Hello, Peter! This is a nice template.".to_owned());
+		assert_eq!(template.to_str(), "Hello, Peter! This is a nice template.".into_strbuf());
 	}
 
 	#[test]
@@ -429,33 +429,33 @@ mod test {
 
 		template1.insert("something", template2);
 
-		assert_eq!(template1.to_str(), "Hello, Peter! This is a really nice template.".to_owned());
+		assert_eq!(template1.to_str(), "Hello, Peter! This is a really nice template.".into_strbuf());
 	}
 
 	#[test]
 	fn conditional() {
 		let mut template = monitored_from_str("Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]");
 		template.insert("name", peter);
-		assert_eq!(template.to_str(), "Hello, Peter!".to_owned());
+		assert_eq!(template.to_str(), "Hello, Peter!".into_strbuf());
 		template.set("condition", true);
-		assert_eq!(template.to_str(), "Hello, Peter! The condition is true.".to_owned());
+		assert_eq!(template.to_str(), "Hello, Peter! The condition is true.".into_strbuf());
 	}
 
 	#[test]
 	fn conditional_switch() {
 		let mut template = monitored_from_str("Hello, [[:name]]! The condition is [[?condition]]true[[/condition]][[?!condition]]false[[/condition]].");
 		template.insert("name", peter);
-		assert_eq!(template.to_str(), "Hello, Peter! The condition is false.".to_owned());
+		assert_eq!(template.to_str(), "Hello, Peter! The condition is false.".into_strbuf());
 		template.set("condition", true);
-		assert_eq!(template.to_str(), "Hello, Peter! The condition is true.".to_owned());
+		assert_eq!(template.to_str(), "Hello, Peter! The condition is true.".into_strbuf());
 	}
 
 	#[test]
 	fn content_conditional() {
 		let mut template = monitored_from_str("Hello[[?:name]], [[:name]][[/name]]![[?!:name]] I don't know you.[[/!name]]");
-		assert_eq!(template.to_str(), "Hello! I don't know you.".to_owned());
+		assert_eq!(template.to_str(), "Hello! I don't know you.".into_strbuf());
 		template.insert("name", peter);
-		assert_eq!(template.to_str(), "Hello, Peter!".to_owned());
+		assert_eq!(template.to_str(), "Hello, Peter!".into_strbuf());
 	}
 
 	#[test]
@@ -463,7 +463,7 @@ mod test {
 		let mut template = monitored_from_str("[[+\"say hello\" hello Peter    \"how are\" you?]]");
 		template.insert_generator("say hello", echo);
 
-		assert_eq!(template.to_str(), "hello:Peter:how are:you?".to_owned());
+		assert_eq!(template.to_str(), "hello:Peter:how are:you?".into_strbuf());
 	}
 
 	#[test]
@@ -472,7 +472,7 @@ mod test {
 		template.insert_float("short", 1.2, 1);
 		template.insert_float("long", 1.2, 4);
 		template.insert("default", 1.2);
-		assert_eq!(template.to_str(), "1.2, 1.2000, 1.2".to_owned())
+		assert_eq!(template.to_str(), "1.2, 1.2000, 1.2".into_strbuf())
 	}
 
 	test_insert!(1u8, 1u16, 1u32, 1u64, 1i8, 1i16, 1i32, 1i64, 'A', true, false)

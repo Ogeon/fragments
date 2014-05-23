@@ -129,7 +129,7 @@ use fragments::Template;
 //This function will just concatenate the arguments.
 //I expect you to make cooler generators, yourself ;)
 fn join(parts: &Vec<StrBuf>) -> Box<Show> {
-	~(parts.concat()) as Box<Show>
+	box parts.concat() as Box<Show>
 }
 
 
