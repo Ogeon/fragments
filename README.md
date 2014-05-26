@@ -5,7 +5,7 @@ fragments
 
 A template library for Rust with support for placeholders, conditional content and content generators.
 
-Online documentation can be found [here](http://www.rust-ci.org/Ogeon/fragments/doc/fragments/).
+Online documentation can be found [here](http://ogeon.github.io/fragments/doc/fragments/).
 
 #Getting started
 
