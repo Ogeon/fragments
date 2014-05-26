@@ -8,5 +8,5 @@ script:
   - make test
   - make docs
 after_script:
-  - curl http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN | sh
-  - sh upload_doc.sh
+  - curl http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN | bash
+  - bash upload_doc.sh
