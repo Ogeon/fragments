@@ -21,11 +21,11 @@ mod parser;
 
 #[deriving(Eq, TotalEq, Show)]
 enum Token {
-	String(StrBuf),
-	Placeholder(StrBuf),
-	Conditional(StrBuf, bool, Vec<Token>),
-	ContentConditional(StrBuf, bool, Vec<Token>),
-	Generated(StrBuf, Vec<StrBuf>)
+	String(String),
+	Placeholder(String),
+	Conditional(String, bool, Vec<Token>),
+	ContentConditional(String, bool, Vec<Token>),
+	Generated(String, Vec<String>)
 }
 
 ///Container enum for template content
@@ -35,7 +35,7 @@ pub enum ContentType {
 	UnsignedInt(u64),
 	Char(char),
 	Bool(bool),
-	Str(StrBuf),
+	Str(String),
 	StaticStr(&'static str),
 	Template(Template),
 	Show(Box<fmt::Show>)
@@ -158,13 +158,13 @@ uint_content!(uint, u8, u16, u32, u64)
 deref_content!([char, Char], [bool, Bool], [&'static str, StaticStr])
 
 
-impl TemplateContent for StrBuf {
+impl TemplateContent for String {
 	fn into_template_content(self) -> ContentType {
 		Str(self)
 	}
 }
 
-impl CopyTemplateContent for StrBuf {
+impl CopyTemplateContent for String {
 	fn to_template_content(&self) -> ContentType {
 		Str(self.clone())
 	}
@@ -215,19 +215,19 @@ impl TemplateContent for ContentType {
 ///rest of the content.
 pub struct Template {
 	///Content for the placeholders
-	pub content: HashMap<StrBuf, ContentType>,
+	pub content: HashMap<String, ContentType>,
 	///Content generators
-	pub generators: HashMap<StrBuf, Box<Generator>>,
+	pub generators: HashMap<String, Box<Generator>>,
 	///Conditional switches
-	pub conditions: HashSet<StrBuf>,
+	pub conditions: HashSet<String>,
 	tokens: Vec<Token>
 }
 
 impl Template {
 	///Create a new `Template` from a character iterator.
 	#[inline]
-	pub fn from_chars(b: &mut std::str::Chars) -> Result<Template, StrBuf> {
-		let tokens = try!(parser::parse(&mut b.map(|r| Ok::<char, StrBuf>(r))));
+	pub fn from_chars(b: &mut std::str::Chars) -> Result<Template, String> {
+		let tokens = try!(parser::parse(&mut b.map(|r| Ok::<char, String>(r))));
 
 		Ok(Template {
 			content: HashMap::new(),
@@ -239,7 +239,7 @@ impl Template {
 
 	///Create a new `Template` from a buffer.
 	#[inline]
-	pub fn from_buffer<T: Buffer>(b: &mut T) -> Result<Template, StrBuf> {
+	pub fn from_buffer<T: Buffer>(b: &mut T) -> Result<Template, String> {
 		let tokens = try!(parser::parse(&mut b.chars().map(|r| match r {
 			Ok(c) => Ok(c),
 			Err(e) => Err(format_strbuf!("io error: {}", e))
@@ -346,11 +346,11 @@ impl fmt::Show for Template {
 
 ///A trait for content generators.
 pub trait Generator {
-	fn generate(&self, args: &Vec<StrBuf>) -> Box<fmt::Show>;
+	fn generate(&self, args: &Vec<String>) -> Box<fmt::Show>;
 }
 
-impl Generator for fn(args: &Vec<StrBuf>) -> Box<fmt::Show> {
-	fn generate(&self, args: &Vec<StrBuf>) -> Box<fmt::Show> {
+impl Generator for fn(args: &Vec<String>) -> Box<fmt::Show> {
+	fn generate(&self, args: &Vec<String>) -> Box<fmt::Show> {
 		(*self)(args)
 	}
 }
@@ -384,7 +384,7 @@ mod test {
 		}
 	}
 
-	fn echo(parts: &Vec<StrBuf>) -> Box<Show> {
+	fn echo(parts: &Vec<String>) -> Box<Show> {
 		box parts.connect(":") as Box<Show>
 	}
 
