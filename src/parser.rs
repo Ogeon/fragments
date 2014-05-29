@@ -144,7 +144,7 @@ fn lex<T: Iterator<Result<char, String>>>(chars: &mut T) -> Result<Vec<LexToken>
 					Some(Ok(c)) => {
 						tokens.push(Character(c));
 					},
-					Some(Err(e)) => return Err(e.into_strbuf()),
+					Some(Err(e)) => return Err(e.into_string()),
 					None => break
 				},
 				c => tokens.push(Character(c))
@@ -198,7 +198,7 @@ fn parse_block<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) -> Resul
 					break
 				},
 				Some(t) => {
-					return Err(format_strbuf!("parse error: unknown token type: '{}'", t))
+					return Err(format!("parse error: unknown token type: '{}'", t))
 				},
 				None => Begin.push_to_buf(&mut string)
 			},

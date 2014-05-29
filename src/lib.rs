@@ -242,7 +242,7 @@ impl Template {
 	pub fn from_buffer<T: Buffer>(b: &mut T) -> Result<Template, String> {
 		let tokens = try!(parser::parse(&mut b.chars().map(|r| match r {
 			Ok(c) => Ok(c),
-			Err(e) => Err(format_strbuf!("io error: {}", e))
+			Err(e) => Err(format!("io error: {}", e))
 		})));
 
 		Ok(Template {
@@ -256,28 +256,28 @@ impl Template {
 	///Insert content.
 	#[inline]
 	pub fn insert<S: StrAllocating, T: TemplateContent>(&mut self, label: S, item: T) {
-		self.content.insert(label.into_strbuf(), item.into_template_content());
+		self.content.insert(label.into_string(), item.into_template_content());
 	}
 
 	///Insert a formatted float.
 	#[inline]
 	pub fn insert_float<S: StrAllocating>(&mut self, label: S, item: f64, precision: uint) {
-		self.content.insert(label.into_strbuf(), Float(item, Some(precision)));
+		self.content.insert(label.into_string(), Float(item, Some(precision)));
 	}
 
 	///Insert a content generator.
 	#[inline]
 	pub fn insert_generator<S: StrAllocating, T: Generator + Send>(&mut self, label: S, gen: T) {
-		self.generators.insert(label.into_strbuf(), box gen as Box<Generator>);
+		self.generators.insert(label.into_string(), box gen as Box<Generator>);
 	}
 
 	///Set a condition.
 	#[inline]
 	pub fn set<S: StrAllocating>(&mut self, label: S, value: bool) {
 		if value {
-			self.conditions.insert(label.into_strbuf());
+			self.conditions.insert(label.into_string());
 		} else {
-			self.conditions.remove(&label.into_strbuf());
+			self.conditions.remove(&label.into_string());
 		}
 	}
 
@@ -391,11 +391,11 @@ mod test {
 	#[test]
 	fn basic_tokens() {
 		let template: Template = from_str("Hello, [[:name]]! This is a [[:something]] template.").unwrap();
-		assert_eq!(template.tokens.get(0), &String("Hello, ".into_strbuf()));
-		assert_eq!(template.tokens.get(1), &Placeholder("name".into_strbuf()));
-		assert_eq!(template.tokens.get(2), &String("! This is a ".into_strbuf()));
-		assert_eq!(template.tokens.get(3), &Placeholder("something".into_strbuf()));
-		assert_eq!(template.tokens.get(4), &String(" template.".into_strbuf()));
+		assert_eq!(template.tokens.get(0), &String("Hello, ".into_string()));
+		assert_eq!(template.tokens.get(1), &Placeholder("name".into_string()));
+		assert_eq!(template.tokens.get(2), &String("! This is a ".into_string()));
+		assert_eq!(template.tokens.get(3), &Placeholder("something".into_string()));
+		assert_eq!(template.tokens.get(4), &String(" template.".into_string()));
 	}
 
 	#[test]
@@ -407,9 +407,9 @@ mod test {
 	#[test]
 	fn escaped_tokens() {
 		let template = monitored_from_str("Hello, [[:name]]! Write placeholders like \\[[:this]] and escape them like \\\\\\[[:this]]");
-		assert_eq!(template.tokens.get(0), &String("Hello, ".into_strbuf()));
-		assert_eq!(template.tokens.get(1), &Placeholder("name".into_strbuf()));
-		assert_eq!(template.tokens.get(2), &String("! Write placeholders like [[:this]] and escape them like \\[[:this]]".into_strbuf()));
+		assert_eq!(template.tokens.get(0), &String("Hello, ".into_string()));
+		assert_eq!(template.tokens.get(1), &Placeholder("name".into_string()));
+		assert_eq!(template.tokens.get(2), &String("! Write placeholders like [[:this]] and escape them like \\[[:this]]".into_string()));
 	}
 
 	#[test]
@@ -417,7 +417,7 @@ mod test {
 		let mut template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
 		template.insert("name", peter);
 		template.insert("something", nice);
-		assert_eq!(template.to_str(), "Hello, Peter! This is a nice template.".into_strbuf());
+		assert_eq!(template.to_str(), "Hello, Peter! This is a nice template.".into_string());
 	}
 
 	#[test]
@@ -429,33 +429,33 @@ mod test {
 
 		template1.insert("something", template2);
 
-		assert_eq!(template1.to_str(), "Hello, Peter! This is a really nice template.".into_strbuf());
+		assert_eq!(template1.to_str(), "Hello, Peter! This is a really nice template.".into_string());
 	}
 
 	#[test]
 	fn conditional() {
 		let mut template = monitored_from_str("Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]");
 		template.insert("name", peter);
-		assert_eq!(template.to_str(), "Hello, Peter!".into_strbuf());
+		assert_eq!(template.to_str(), "Hello, Peter!".into_string());
 		template.set("condition", true);
-		assert_eq!(template.to_str(), "Hello, Peter! The condition is true.".into_strbuf());
+		assert_eq!(template.to_str(), "Hello, Peter! The condition is true.".into_string());
 	}
 
 	#[test]
 	fn conditional_switch() {
 		let mut template = monitored_from_str("Hello, [[:name]]! The condition is [[?condition]]true[[/condition]][[?!condition]]false[[/condition]].");
 		template.insert("name", peter);
-		assert_eq!(template.to_str(), "Hello, Peter! The condition is false.".into_strbuf());
+		assert_eq!(template.to_str(), "Hello, Peter! The condition is false.".into_string());
 		template.set("condition", true);
-		assert_eq!(template.to_str(), "Hello, Peter! The condition is true.".into_strbuf());
+		assert_eq!(template.to_str(), "Hello, Peter! The condition is true.".into_string());
 	}
 
 	#[test]
 	fn content_conditional() {
 		let mut template = monitored_from_str("Hello[[?:name]], [[:name]][[/name]]![[?!:name]] I don't know you.[[/!name]]");
-		assert_eq!(template.to_str(), "Hello! I don't know you.".into_strbuf());
+		assert_eq!(template.to_str(), "Hello! I don't know you.".into_string());
 		template.insert("name", peter);
-		assert_eq!(template.to_str(), "Hello, Peter!".into_strbuf());
+		assert_eq!(template.to_str(), "Hello, Peter!".into_string());
 	}
 
 	#[test]
@@ -463,7 +463,7 @@ mod test {
 		let mut template = monitored_from_str("[[+\"say hello\" hello Peter    \"how are\" you?]]");
 		template.insert_generator("say hello", echo);
 
-		assert_eq!(template.to_str(), "hello:Peter:how are:you?".into_strbuf());
+		assert_eq!(template.to_str(), "hello:Peter:how are:you?".into_string());
 	}
 
 	#[test]
@@ -472,7 +472,7 @@ mod test {
 		template.insert_float("short", 1.2, 1);
 		template.insert_float("long", 1.2, 4);
 		template.insert("default", 1.2);
-		assert_eq!(template.to_str(), "1.2, 1.2000, 1.2".into_strbuf())
+		assert_eq!(template.to_str(), "1.2, 1.2000, 1.2".into_string())
 	}
 
 	test_insert!(1u8, 1u16, 1u32, 1u64, 1i8, 1i16, 1i32, 1i64, 'A', true, false)
