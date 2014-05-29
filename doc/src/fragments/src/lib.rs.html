@@ -762,7 +762,7 @@
 	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>from_buffer</span><span class='op'>&lt;</span><span class='ident'>T</span>: <span class='ident'>Buffer</span><span class='op'>&gt;</span>(<span class='ident'>b</span>: <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>T</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>Template</span>, <span class='ident'>String</span><span class='op'>&gt;</span> {
 		<span class='kw'>let</span> <span class='ident'>tokens</span> <span class='op'>=</span> <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>parser</span>::<span class='ident'>parse</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>b</span>.<span class='ident'>chars</span>().<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>r</span><span class='op'>|</span> <span class='kw'>match</span> <span class='ident'>r</span> {
 			<span class='prelude-val'>Ok</span>(<span class='ident'>c</span>) <span class='op'>=&gt;</span> <span class='prelude-val'>Ok</span>(<span class='ident'>c</span>),
-			<span class='prelude-val'>Err</span>(<span class='ident'>e</span>) <span class='op'>=&gt;</span> <span class='prelude-val'>Err</span>(<span class='macro'>format_strbuf</span><span class='macro'>!</span>(<span class='string'>&quot;io error: {}&quot;</span>, <span class='ident'>e</span>))
+			<span class='prelude-val'>Err</span>(<span class='ident'>e</span>) <span class='op'>=&gt;</span> <span class='prelude-val'>Err</span>(<span class='macro'>format</span><span class='macro'>!</span>(<span class='string'>&quot;io error: {}&quot;</span>, <span class='ident'>e</span>))
 		})));
 
 		<span class='prelude-val'>Ok</span>(<span class='ident'>Template</span> {
@@ -776,28 +776,28 @@
 	<span class='doccomment'>///Insert content.
 </span>	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
 	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>insert</span><span class='op'>&lt;</span><span class='ident'>S</span>: <span class='ident'>StrAllocating</span>, <span class='ident'>T</span>: <span class='ident'>TemplateContent</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>label</span>: <span class='ident'>S</span>, <span class='ident'>item</span>: <span class='ident'>T</span>) {
-		<span class='self'>self</span>.<span class='ident'>content</span>.<span class='ident'>insert</span>(<span class='ident'>label</span>.<span class='ident'>into_strbuf</span>(), <span class='ident'>item</span>.<span class='ident'>into_template_content</span>());
+		<span class='self'>self</span>.<span class='ident'>content</span>.<span class='ident'>insert</span>(<span class='ident'>label</span>.<span class='ident'>into_string</span>(), <span class='ident'>item</span>.<span class='ident'>into_template_content</span>());
 	}
 
 	<span class='doccomment'>///Insert a formatted float.
 </span>	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
 	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>insert_float</span><span class='op'>&lt;</span><span class='ident'>S</span>: <span class='ident'>StrAllocating</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>label</span>: <span class='ident'>S</span>, <span class='ident'>item</span>: <span class='ident'>f64</span>, <span class='ident'>precision</span>: <span class='ident'>uint</span>) {
-		<span class='self'>self</span>.<span class='ident'>content</span>.<span class='ident'>insert</span>(<span class='ident'>label</span>.<span class='ident'>into_strbuf</span>(), <span class='ident'>Float</span>(<span class='ident'>item</span>, <span class='prelude-val'>Some</span>(<span class='ident'>precision</span>)));
+		<span class='self'>self</span>.<span class='ident'>content</span>.<span class='ident'>insert</span>(<span class='ident'>label</span>.<span class='ident'>into_string</span>(), <span class='ident'>Float</span>(<span class='ident'>item</span>, <span class='prelude-val'>Some</span>(<span class='ident'>precision</span>)));
 	}
 
 	<span class='doccomment'>///Insert a content generator.
 </span>	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
 	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>insert_generator</span><span class='op'>&lt;</span><span class='ident'>S</span>: <span class='ident'>StrAllocating</span>, <span class='ident'>T</span>: <span class='ident'>Generator</span> <span class='op'>+</span> <span class='ident'>Send</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>label</span>: <span class='ident'>S</span>, <span class='ident'>gen</span>: <span class='ident'>T</span>) {
-		<span class='self'>self</span>.<span class='ident'>generators</span>.<span class='ident'>insert</span>(<span class='ident'>label</span>.<span class='ident'>into_strbuf</span>(), <span class='kw'>box</span> <span class='ident'>gen</span> <span class='kw'>as</span> <span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Generator</span><span class='op'>&gt;</span>);
+		<span class='self'>self</span>.<span class='ident'>generators</span>.<span class='ident'>insert</span>(<span class='ident'>label</span>.<span class='ident'>into_string</span>(), <span class='kw'>box</span> <span class='ident'>gen</span> <span class='kw'>as</span> <span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Generator</span><span class='op'>&gt;</span>);
 	}
 
 	<span class='doccomment'>///Set a condition.
 </span>	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
 	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>set</span><span class='op'>&lt;</span><span class='ident'>S</span>: <span class='ident'>StrAllocating</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>label</span>: <span class='ident'>S</span>, <span class='ident'>value</span>: <span class='ident'>bool</span>) {
 		<span class='kw'>if</span> <span class='ident'>value</span> {
-			<span class='self'>self</span>.<span class='ident'>conditions</span>.<span class='ident'>insert</span>(<span class='ident'>label</span>.<span class='ident'>into_strbuf</span>());
+			<span class='self'>self</span>.<span class='ident'>conditions</span>.<span class='ident'>insert</span>(<span class='ident'>label</span>.<span class='ident'>into_string</span>());
 		} <span class='kw'>else</span> {
-			<span class='self'>self</span>.<span class='ident'>conditions</span>.<span class='ident'>remove</span>(<span class='kw-2'>&amp;</span><span class='ident'>label</span>.<span class='ident'>into_strbuf</span>());
+			<span class='self'>self</span>.<span class='ident'>conditions</span>.<span class='ident'>remove</span>(<span class='kw-2'>&amp;</span><span class='ident'>label</span>.<span class='ident'>into_string</span>());
 		}
 	}
 
@@ -911,11 +911,11 @@
 	<span class='attribute'>#[<span class='ident'>test</span>]</span>
 	<span class='kw'>fn</span> <span class='ident'>basic_tokens</span>() {
 		<span class='kw'>let</span> <span class='ident'>template</span>: <span class='ident'>Template</span> <span class='op'>=</span> <span class='ident'>from_str</span>(<span class='string'>&quot;Hello, [[:name]]! This is a [[:something]] template.&quot;</span>).<span class='ident'>unwrap</span>();
-		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>tokens</span>.<span class='ident'>get</span>(<span class='number'>0</span>), <span class='kw-2'>&amp;</span><span class='ident'>String</span>(<span class='string'>&quot;Hello, &quot;</span>.<span class='ident'>into_strbuf</span>()));
-		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>tokens</span>.<span class='ident'>get</span>(<span class='number'>1</span>), <span class='kw-2'>&amp;</span><span class='ident'>Placeholder</span>(<span class='string'>&quot;name&quot;</span>.<span class='ident'>into_strbuf</span>()));
-		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>tokens</span>.<span class='ident'>get</span>(<span class='number'>2</span>), <span class='kw-2'>&amp;</span><span class='ident'>String</span>(<span class='string'>&quot;! This is a &quot;</span>.<span class='ident'>into_strbuf</span>()));
-		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>tokens</span>.<span class='ident'>get</span>(<span class='number'>3</span>), <span class='kw-2'>&amp;</span><span class='ident'>Placeholder</span>(<span class='string'>&quot;something&quot;</span>.<span class='ident'>into_strbuf</span>()));
-		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>tokens</span>.<span class='ident'>get</span>(<span class='number'>4</span>), <span class='kw-2'>&amp;</span><span class='ident'>String</span>(<span class='string'>&quot; template.&quot;</span>.<span class='ident'>into_strbuf</span>()));
+		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>tokens</span>.<span class='ident'>get</span>(<span class='number'>0</span>), <span class='kw-2'>&amp;</span><span class='ident'>String</span>(<span class='string'>&quot;Hello, &quot;</span>.<span class='ident'>into_string</span>()));
+		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>tokens</span>.<span class='ident'>get</span>(<span class='number'>1</span>), <span class='kw-2'>&amp;</span><span class='ident'>Placeholder</span>(<span class='string'>&quot;name&quot;</span>.<span class='ident'>into_string</span>()));
+		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>tokens</span>.<span class='ident'>get</span>(<span class='number'>2</span>), <span class='kw-2'>&amp;</span><span class='ident'>String</span>(<span class='string'>&quot;! This is a &quot;</span>.<span class='ident'>into_string</span>()));
+		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>tokens</span>.<span class='ident'>get</span>(<span class='number'>3</span>), <span class='kw-2'>&amp;</span><span class='ident'>Placeholder</span>(<span class='string'>&quot;something&quot;</span>.<span class='ident'>into_string</span>()));
+		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>tokens</span>.<span class='ident'>get</span>(<span class='number'>4</span>), <span class='kw-2'>&amp;</span><span class='ident'>String</span>(<span class='string'>&quot; template.&quot;</span>.<span class='ident'>into_string</span>()));
 	}
 
 	<span class='attribute'>#[<span class='ident'>test</span>]</span>
@@ -927,9 +927,9 @@
 	<span class='attribute'>#[<span class='ident'>test</span>]</span>
 	<span class='kw'>fn</span> <span class='ident'>escaped_tokens</span>() {
 		<span class='kw'>let</span> <span class='ident'>template</span> <span class='op'>=</span> <span class='ident'>monitored_from_str</span>(<span class='string'>&quot;Hello, [[:name]]! Write placeholders like \\[[:this]] and escape them like \\\\\\[[:this]]&quot;</span>);
-		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>tokens</span>.<span class='ident'>get</span>(<span class='number'>0</span>), <span class='kw-2'>&amp;</span><span class='ident'>String</span>(<span class='string'>&quot;Hello, &quot;</span>.<span class='ident'>into_strbuf</span>()));
-		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>tokens</span>.<span class='ident'>get</span>(<span class='number'>1</span>), <span class='kw-2'>&amp;</span><span class='ident'>Placeholder</span>(<span class='string'>&quot;name&quot;</span>.<span class='ident'>into_strbuf</span>()));
-		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>tokens</span>.<span class='ident'>get</span>(<span class='number'>2</span>), <span class='kw-2'>&amp;</span><span class='ident'>String</span>(<span class='string'>&quot;! Write placeholders like [[:this]] and escape them like \\[[:this]]&quot;</span>.<span class='ident'>into_strbuf</span>()));
+		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>tokens</span>.<span class='ident'>get</span>(<span class='number'>0</span>), <span class='kw-2'>&amp;</span><span class='ident'>String</span>(<span class='string'>&quot;Hello, &quot;</span>.<span class='ident'>into_string</span>()));
+		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>tokens</span>.<span class='ident'>get</span>(<span class='number'>1</span>), <span class='kw-2'>&amp;</span><span class='ident'>Placeholder</span>(<span class='string'>&quot;name&quot;</span>.<span class='ident'>into_string</span>()));
+		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>tokens</span>.<span class='ident'>get</span>(<span class='number'>2</span>), <span class='kw-2'>&amp;</span><span class='ident'>String</span>(<span class='string'>&quot;! Write placeholders like [[:this]] and escape them like \\[[:this]]&quot;</span>.<span class='ident'>into_string</span>()));
 	}
 
 	<span class='attribute'>#[<span class='ident'>test</span>]</span>
@@ -937,7 +937,7 @@
 		<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>template</span> <span class='op'>=</span> <span class='ident'>monitored_from_str</span>(<span class='string'>&quot;Hello, [[:name]]! This is a [[:something]] template.&quot;</span>);
 		<span class='ident'>template</span>.<span class='ident'>insert</span>(<span class='string'>&quot;name&quot;</span>, <span class='ident'>peter</span>);
 		<span class='ident'>template</span>.<span class='ident'>insert</span>(<span class='string'>&quot;something&quot;</span>, <span class='ident'>nice</span>);
-		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>to_str</span>(), <span class='string'>&quot;Hello, Peter! This is a nice template.&quot;</span>.<span class='ident'>into_strbuf</span>());
+		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>to_str</span>(), <span class='string'>&quot;Hello, Peter! This is a nice template.&quot;</span>.<span class='ident'>into_string</span>());
 	}
 
 	<span class='attribute'>#[<span class='ident'>test</span>]</span>
@@ -949,33 +949,33 @@
 
 		<span class='ident'>template1</span>.<span class='ident'>insert</span>(<span class='string'>&quot;something&quot;</span>, <span class='ident'>template2</span>);
 
-		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template1</span>.<span class='ident'>to_str</span>(), <span class='string'>&quot;Hello, Peter! This is a really nice template.&quot;</span>.<span class='ident'>into_strbuf</span>());
+		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template1</span>.<span class='ident'>to_str</span>(), <span class='string'>&quot;Hello, Peter! This is a really nice template.&quot;</span>.<span class='ident'>into_string</span>());
 	}
 
 	<span class='attribute'>#[<span class='ident'>test</span>]</span>
 	<span class='kw'>fn</span> <span class='ident'>conditional</span>() {
 		<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>template</span> <span class='op'>=</span> <span class='ident'>monitored_from_str</span>(<span class='string'>&quot;Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]&quot;</span>);
 		<span class='ident'>template</span>.<span class='ident'>insert</span>(<span class='string'>&quot;name&quot;</span>, <span class='ident'>peter</span>);
-		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>to_str</span>(), <span class='string'>&quot;Hello, Peter!&quot;</span>.<span class='ident'>into_strbuf</span>());
+		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>to_str</span>(), <span class='string'>&quot;Hello, Peter!&quot;</span>.<span class='ident'>into_string</span>());
 		<span class='ident'>template</span>.<span class='ident'>set</span>(<span class='string'>&quot;condition&quot;</span>, <span class='boolval'>true</span>);
-		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>to_str</span>(), <span class='string'>&quot;Hello, Peter! The condition is true.&quot;</span>.<span class='ident'>into_strbuf</span>());
+		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>to_str</span>(), <span class='string'>&quot;Hello, Peter! The condition is true.&quot;</span>.<span class='ident'>into_string</span>());
 	}
 
 	<span class='attribute'>#[<span class='ident'>test</span>]</span>
 	<span class='kw'>fn</span> <span class='ident'>conditional_switch</span>() {
 		<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>template</span> <span class='op'>=</span> <span class='ident'>monitored_from_str</span>(<span class='string'>&quot;Hello, [[:name]]! The condition is [[?condition]]true[[/condition]][[?!condition]]false[[/condition]].&quot;</span>);
 		<span class='ident'>template</span>.<span class='ident'>insert</span>(<span class='string'>&quot;name&quot;</span>, <span class='ident'>peter</span>);
-		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>to_str</span>(), <span class='string'>&quot;Hello, Peter! The condition is false.&quot;</span>.<span class='ident'>into_strbuf</span>());
+		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>to_str</span>(), <span class='string'>&quot;Hello, Peter! The condition is false.&quot;</span>.<span class='ident'>into_string</span>());
 		<span class='ident'>template</span>.<span class='ident'>set</span>(<span class='string'>&quot;condition&quot;</span>, <span class='boolval'>true</span>);
-		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>to_str</span>(), <span class='string'>&quot;Hello, Peter! The condition is true.&quot;</span>.<span class='ident'>into_strbuf</span>());
+		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>to_str</span>(), <span class='string'>&quot;Hello, Peter! The condition is true.&quot;</span>.<span class='ident'>into_string</span>());
 	}
 
 	<span class='attribute'>#[<span class='ident'>test</span>]</span>
 	<span class='kw'>fn</span> <span class='ident'>content_conditional</span>() {
 		<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>template</span> <span class='op'>=</span> <span class='ident'>monitored_from_str</span>(<span class='string'>&quot;Hello[[?:name]], [[:name]][[/name]]![[?!:name]] I don&#39;t know you.[[/!name]]&quot;</span>);
-		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>to_str</span>(), <span class='string'>&quot;Hello! I don&#39;t know you.&quot;</span>.<span class='ident'>into_strbuf</span>());
+		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>to_str</span>(), <span class='string'>&quot;Hello! I don&#39;t know you.&quot;</span>.<span class='ident'>into_string</span>());
 		<span class='ident'>template</span>.<span class='ident'>insert</span>(<span class='string'>&quot;name&quot;</span>, <span class='ident'>peter</span>);
-		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>to_str</span>(), <span class='string'>&quot;Hello, Peter!&quot;</span>.<span class='ident'>into_strbuf</span>());
+		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>to_str</span>(), <span class='string'>&quot;Hello, Peter!&quot;</span>.<span class='ident'>into_string</span>());
 	}
 
 	<span class='attribute'>#[<span class='ident'>test</span>]</span>
@@ -983,7 +983,7 @@
 		<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>template</span> <span class='op'>=</span> <span class='ident'>monitored_from_str</span>(<span class='string'>&quot;[[+\&quot;say hello\&quot; hello Peter    \&quot;how are\&quot; you?]]&quot;</span>);
 		<span class='ident'>template</span>.<span class='ident'>insert_generator</span>(<span class='string'>&quot;say hello&quot;</span>, <span class='ident'>echo</span>);
 
-		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>to_str</span>(), <span class='string'>&quot;hello:Peter:how are:you?&quot;</span>.<span class='ident'>into_strbuf</span>());
+		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>to_str</span>(), <span class='string'>&quot;hello:Peter:how are:you?&quot;</span>.<span class='ident'>into_string</span>());
 	}
 
 	<span class='attribute'>#[<span class='ident'>test</span>]</span>
@@ -992,7 +992,7 @@
 		<span class='ident'>template</span>.<span class='ident'>insert_float</span>(<span class='string'>&quot;short&quot;</span>, <span class='number'>1.2</span>, <span class='number'>1</span>);
 		<span class='ident'>template</span>.<span class='ident'>insert_float</span>(<span class='string'>&quot;long&quot;</span>, <span class='number'>1.2</span>, <span class='number'>4</span>);
 		<span class='ident'>template</span>.<span class='ident'>insert</span>(<span class='string'>&quot;default&quot;</span>, <span class='number'>1.2</span>);
-		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>to_str</span>(), <span class='string'>&quot;1.2, 1.2000, 1.2&quot;</span>.<span class='ident'>into_strbuf</span>())
+		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>to_str</span>(), <span class='string'>&quot;1.2, 1.2000, 1.2&quot;</span>.<span class='ident'>into_string</span>())
 	}
 
 	<span class='macro'>test_insert</span><span class='macro'>!</span>(<span class='number'>1u8</span>, <span class='number'>1u16</span>, <span class='number'>1u32</span>, <span class='number'>1u64</span>, <span class='number'>1i8</span>, <span class='number'>1i16</span>, <span class='number'>1i32</span>, <span class='number'>1i64</span>, <span class='string'>&#39;A&#39;</span>, <span class='boolval'>true</span>, <span class='boolval'>false</span>)
