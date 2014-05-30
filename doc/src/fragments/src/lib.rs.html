@@ -597,13 +597,13 @@
 
 
 <span class='doccomment'>///A trait for types that can be inserted into templates
-</span><span class='kw'>trait</span> <span class='ident'>TemplateContent</span> {
+</span><span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>TemplateContent</span> {
 	<span class='doccomment'>///Convert `self` to a suitable `ContentType` variant, not making a copy if possible.
 </span>	<span class='kw'>fn</span> <span class='ident'>into_template_content</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>ContentType</span>;
 }
 
 <span class='doccomment'>///A trait for types that can be copied and inserted into templates
-</span><span class='kw'>trait</span> <span class='ident'>CopyTemplateContent</span> {
+</span><span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>CopyTemplateContent</span> {
 	<span class='doccomment'>///Copy and convert `self` to a suitable `ContentType` variant.
 </span>	<span class='kw'>fn</span> <span class='ident'>to_template_content</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>ContentType</span>;
 }
