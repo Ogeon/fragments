@@ -77,13 +77,13 @@ impl fmt::Show for ContentType {
 
 
 ///A trait for types that can be inserted into templates
-trait TemplateContent {
+pub trait TemplateContent {
 	///Convert `self` to a suitable `ContentType` variant, not making a copy if possible.
 	fn into_template_content(self) -> ContentType;
 }
 
 ///A trait for types that can be copied and inserted into templates
-trait CopyTemplateContent {
+pub trait CopyTemplateContent {
 	///Copy and convert `self` to a suitable `ContentType` variant.
 	fn to_template_content(&self) -> ContentType;
 }
