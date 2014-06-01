@@ -539,7 +539,7 @@
 
 <span class='kw'>mod</span> <span class='ident'>parser</span>;
 
-<span class='attribute'>#[<span class='ident'>deriving</span>(<span class='ident'>Eq</span>, <span class='ident'>TotalEq</span>, <span class='ident'>Show</span>)]</span>
+<span class='attribute'>#[<span class='ident'>deriving</span>(<span class='ident'>PartialEq</span>, <span class='ident'>Show</span>)]</span>
 <span class='kw'>enum</span> <span class='ident'>Token</span> {
 	<span class='ident'>String</span>(<span class='ident'>String</span>),
 	<span class='ident'>Placeholder</span>(<span class='ident'>String</span>),
