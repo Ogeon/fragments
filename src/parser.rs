@@ -3,7 +3,7 @@ use super::{Token, String, Placeholder, Conditional, ContentConditional, Generat
 use std::iter::{Iterator, Peekable};
 use std::fmt;
 
-#[deriving(Eq)]
+#[deriving(PartialEq)]
 enum LexToken {
 	Begin,
 	End,
@@ -61,7 +61,7 @@ struct Parser<T, V> {
     tokens: Peekable<V, T>
 }
 
-impl<T: Iterator<V>, V: Eq> Parser<T, V> {
+impl<T: Iterator<V>, V: PartialEq> Parser<T, V> {
 	#[inline]
 	fn eat(&mut self, expected: V) -> bool {
 		let eaten = match self.peek() {

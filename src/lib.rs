@@ -19,7 +19,7 @@ use collections::hashmap::{HashMap, HashSet};
 
 mod parser;
 
-#[deriving(Eq, TotalEq, Show)]
+#[deriving(PartialEq, Show)]
 enum Token {
 	String(String),
 	Placeholder(String),
