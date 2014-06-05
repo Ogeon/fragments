@@ -41,13 +41,13 @@
     <section id='main' class="content type">
 <h1 class='fqn'>Enum <a href='index.html'>fragments</a>::<a class='type' href=''>ContentType</a><a class='source' id='src-2316' href='../src/fragments/src/lib.rs.html#32-42'>[src]</a></h1>
 <pre class='rust enum'>pub enum ContentType {
-    Float(f64, <a class='type' href='http://doc.rust-lang.org/core/option/type.Option.html' title='core::option::Option'>Option</a>&lt;uint&gt;),
-    Int(i64),
-    UnsignedInt(u64),
-    Char(char),
-    Bool(bool),
+    Float(<a href='http://doc.rust-lang.org/core/primitive.f64.html'>f64</a>, <a class='type' href='http://doc.rust-lang.org/core/option/type.Option.html' title='core::option::Option'>Option</a>&lt;<a href='http://doc.rust-lang.org/core/primitive.uint.html'>uint</a>&gt;),
+    Int(<a href='http://doc.rust-lang.org/core/primitive.i64.html'>i64</a>),
+    UnsignedInt(<a href='http://doc.rust-lang.org/core/primitive.u64.html'>u64</a>),
+    Char(<a href='http://doc.rust-lang.org/core/primitive.char.html'>char</a>),
+    Bool(<a href='http://doc.rust-lang.org/core/primitive.bool.html'>bool</a>),
     Str(<a class='struct' href='http://doc.rust-lang.org/std/string/struct.String.html' title='std::string::String'>String</a>),
-    StaticStr(&amp;'static str),
+    StaticStr(&amp;'static <a href='http://doc.rust-lang.org/core/primitive.str.html'>str</a>),
     Template(<a class='struct' href='../fragments/struct.Template.html' title='fragments::Template'>Template</a>),
     Show(<a class='struct' href='http://doc.rust-lang.org/alloc/owned/struct.Box.html' title='alloc::owned::Box'>Box</a>&lt;<a class='trait' href='http://doc.rust-lang.org/core/fmt/trait.Show.html' title='core::fmt::Show'>Show</a>&gt;),
 }</pre><div class='docblock'><p>Container enum for template content</p>
