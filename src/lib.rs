@@ -9,13 +9,11 @@
 
 #![feature(macro_rules)]
 
-extern crate collections;
-
 use std::fmt;
 use std::fmt::Show;
 use std::from_str::FromStr;
 use std::vec::Vec;
-use collections::hashmap::{HashMap, HashSet};
+use std::collections::hashmap::{HashMap, HashSet};
 
 mod parser;
 
