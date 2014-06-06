@@ -447,12 +447,12 @@ trait Overridable {
 
 ///A trait for content generators.
 pub trait Generator {
-	fn generate(&self, args: &Vec<String>) -> Box<fmt::Show>;
+	fn generate(&self, args: &Vec<String>, formatter:  &mut fmt::Formatter) -> fmt::Result;
 }
 
-impl Generator for fn(args: &Vec<String>) -> Box<fmt::Show> {
-	fn generate(&self, args: &Vec<String>) -> Box<fmt::Show> {
-		(*self)(args)
+impl Generator for fn(args: &Vec<String>, &mut fmt::Formatter) -> fmt::Result {
+	fn generate(&self, args: &Vec<String>, formatter:  &mut fmt::Formatter) -> fmt::Result {
+		(*self)(args, formatter)
 	}
 }
 
@@ -489,7 +489,7 @@ fn format_tokens(template: &Overridable, tokens: &Vec<Token>, f: &mut fmt::Forma
 
 			&Generated(ref k, ref vars) => {
 				match template.find_generator(k) {
-					Some(gen) => gen.generate(vars).fmt(f),
+					Some(gen) => gen.generate(vars, f),
 					None => Ok(())
 				}
 			}
@@ -510,7 +510,8 @@ fn format_tokens(template: &Overridable, tokens: &Vec<Token>, f: &mut fmt::Forma
 #[cfg(test)]
 mod test {
 	use super::{Template, Placeholder, String, Overridable};
-	use std::fmt::Show;
+	use std::fmt::{Show, Formatter};
+	use std::fmt;
 
 	macro_rules! test_insert(
 		($($v:expr),+) => (
@@ -535,12 +536,12 @@ mod test {
 		}
 	}
 
-	fn echo(parts: &Vec<String>) -> Box<Show> {
-		box parts.connect(":") as Box<Show>
+	fn echo(parts: &Vec<String>, f: &mut Formatter) -> fmt::Result {
+		parts.connect(":").fmt(f)
 	}
 
-	fn echo2(parts: &Vec<String>) -> Box<Show> {
-		box parts.connect("_") as Box<Show>
+	fn echo2(parts: &Vec<String>, f: &mut Formatter) -> fmt::Result {
+		parts.connect("_").fmt(f)
 	}
 
 	#[test]
