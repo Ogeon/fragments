@@ -19,8 +19,9 @@ use collections::hashmap::{HashMap, HashSet};
 
 mod parser;
 
+///Internal representation of template parts.
 #[deriving(PartialEq, Show)]
-enum Token {
+pub enum Token {
 	String(String),
 	Placeholder(String),
 	Conditional(String, bool, Vec<Token>),
@@ -280,50 +281,27 @@ impl Template {
 			self.conditions.remove(&label.into_string());
 		}
 	}
+}
 
-	fn format_tokens(&self, tokens: &Vec<Token>, f: &mut fmt::Formatter) -> fmt::Result {
-		for token in tokens.iter() {
-			let res = match token {
-				&String(ref s) => f.write(s.as_bytes()),
+impl Overridable for Template {
+	fn find_content<'a>(&'a self, label: &String) -> Option<&'a ContentType> {
+		self.content.find(label)
+	}
 
-				&Placeholder(ref k) => {
-					match self.content.find(k) {
-						Some(value) => value.fmt(f),
-						None => Ok(())
-					}
-				},
+	fn get_condition(&self, label: &String) -> bool {
+		self.conditions.contains(label)
+	}
+	
+	fn is_content_definded(&self, label: &String) -> bool {
+		self.content.contains_key(label)
+	}
 
-				&Conditional(ref k, expected, ref tokens) => {
-					if self.conditions.contains(k) == expected {
-						self.format_tokens(tokens, f)
-					} else {
-						Ok(())
-					}
-				},
+	fn find_generator<'a>(&'a self, label: &String) -> Option<&'a Box<Generator>> {
+		self.generators.find(label)
+	}
 
-				&ContentConditional(ref k, expected, ref tokens) => {
-					if self.content.contains_key(k) == expected {
-						self.format_tokens(tokens, f)
-					} else {
-						Ok(())
-					}
-				},
-
-				&Generated(ref k, ref vars) => {
-					match self.generators.find(k) {
-						Some(gen) => gen.generate(vars).fmt(f),
-						None => Ok(())
-					}
-				}
-			};
-
-			match res {
-				Err(e) => return Err(e),
-				_ => {}
-			}
-		}
-
-		Ok(())
+	fn get_tokens<'a>(&'a self) -> &'a Vec<Token> {
+		&self.tokens
 	}
 }
 
@@ -339,7 +317,130 @@ impl FromStr for Template {
 
 impl fmt::Show for Template {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		self.format_tokens(&self.tokens, f)
+		format_tokens(self as &Overridable, &self.tokens, f)
+	}
+}
+
+
+
+
+
+///A `Shell` is a layer on top of an overridable template.
+///
+///Shells can be used to assign different values to a template and still
+///keep the original intact.
+pub struct Shell<'a> {
+    ///Content for the placeholders
+	pub content: HashMap<String, Option<ContentType>>,
+	///Content generators
+	pub generators: HashMap<String, Option<Box<Generator>>>,
+	///Conditional switches
+	pub conditions: HashMap<String, bool>,
+    base: &'a Overridable
+}
+
+impl<'a> Shell<'a> {
+	///Create a new `Shell` around `base`.
+	pub fn new<'a>(base: &'a Overridable) -> Shell<'a> {
+		Shell {
+			content: HashMap::new(),
+			generators: HashMap::new(),
+			conditions: HashMap::new(),
+			base: base
+		}
+	}
+
+	///Insert content.
+	#[inline]
+	pub fn insert<S: StrAllocating, T: TemplateContent>(&mut self, label: S, item: T) {
+		self.content.insert(label.into_string(), Some(item.into_template_content()));
+	}
+
+	///Unset content.
+	#[inline]
+	pub fn unset<S: StrAllocating>(&mut self, label: S) {
+		self.content.insert(label.into_string(), None);
+	}
+
+	///Insert a formatted float.
+	#[inline]
+	pub fn insert_float<S: StrAllocating>(&mut self, label: S, item: f64, precision: uint) {
+		self.content.insert(label.into_string(), Some(Float(item, Some(precision))));
+	}
+
+	///Insert a content generator.
+	#[inline]
+	pub fn insert_generator<S: StrAllocating, T: Generator + Send>(&mut self, label: S, gen: T) {
+		self.generators.insert(label.into_string(), Some(box gen as Box<Generator>));
+	}
+
+	///Unset a content generator.
+	#[inline]
+	pub fn unset_generator<S: StrAllocating>(&mut self, label: S) {
+		self.generators.insert(label.into_string(), None);
+	}
+
+	///Set a condition.
+	#[inline]
+	pub fn set<S: StrAllocating>(&mut self, label: S, value: bool) {
+		self.conditions.insert(label.into_string(), value);
+	}
+}
+
+impl<'a> Overridable for Shell<'a> {
+	fn find_content<'a>(&'a self, label: &String) -> Option<&'a ContentType> {
+		match self.content.find(label) {
+			Some(&Some(ref v)) => Some(v),
+			Some(&None) => None,
+			None => self.base.find_content(label)
+		}
+	}
+
+	fn get_condition(&self, label: &String) -> bool {
+		self.conditions.find(label).map(|&v| v).unwrap_or_else(|| self.base.get_condition(label))
+	}
+	
+	fn is_content_definded(&self, label: &String) -> bool {
+		match self.content.find(label) {
+			Some(&Some(_)) => true,
+			Some(&None) => false,
+			None => self.base.is_content_definded(label)
+		}
+	}
+
+	fn find_generator<'a>(&'a self, label: &String) -> Option<&'a Box<Generator>> {
+		match self.generators.find(label) {
+			Some(&Some(ref v)) => Some(v),
+			Some(&None) => None,
+			None => self.base.find_generator(label)
+		}
+	}
+
+	fn get_tokens<'a>(&'a self) -> &'a Vec<Token> {
+		self.base.get_tokens()
+	}
+}
+
+impl<'a> fmt::Show for Shell<'a> {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		format_tokens(self as &Overridable, self.get_tokens(), f)
+	}
+}
+
+
+
+
+///A trait for overridable templates.
+trait Overridable {
+	fn find_content<'a>(&'a self, label: &String) -> Option<&'a ContentType>;
+	fn get_condition(&self, label: &String) -> bool;
+	fn is_content_definded(&self, label: &String) -> bool;
+	fn find_generator<'a>(&'a self, label: &String) -> Option<&'a Box<Generator>>;
+	fn get_tokens<'a>(&'a self) -> &'a Vec<Token>;
+
+	///Create a `Shell` around this template.
+	fn override<'a>(&'a self) -> Shell {
+		Shell::new(self as &'a Overridable)
 	}
 }
 
@@ -356,9 +457,59 @@ impl Generator for fn(args: &Vec<String>) -> Box<fmt::Show> {
 }
 
 
+
+
+fn format_tokens(template: &Overridable, tokens: &Vec<Token>, f: &mut fmt::Formatter) -> fmt::Result {
+	for token in tokens.iter() {
+		let res = match token {
+			&String(ref s) => f.write(s.as_bytes()),
+
+			&Placeholder(ref k) => {
+				match template.find_content(k) {
+					Some(value) => value.fmt(f),
+					None => Ok(())
+				}
+			},
+
+			&Conditional(ref k, expected, ref tokens) => {
+				if template.get_condition(k) == expected {
+					format_tokens(template, tokens, f)
+				} else {
+					Ok(())
+				}
+			},
+
+			&ContentConditional(ref k, expected, ref tokens) => {
+				if template.is_content_definded(k) == expected {
+					format_tokens(template, tokens, f)
+				} else {
+					Ok(())
+				}
+			},
+
+			&Generated(ref k, ref vars) => {
+				match template.find_generator(k) {
+					Some(gen) => gen.generate(vars).fmt(f),
+					None => Ok(())
+				}
+			}
+		};
+
+		match res {
+			Err(e) => return Err(e),
+			_ => {}
+		}
+	}
+
+	Ok(())
+}
+
+
+
+
 #[cfg(test)]
 mod test {
-	use super::{Template, Placeholder, String};
+	use super::{Template, Placeholder, String, Overridable};
 	use std::fmt::Show;
 
 	macro_rules! test_insert(
@@ -386,6 +537,10 @@ mod test {
 
 	fn echo(parts: &Vec<String>) -> Box<Show> {
 		box parts.connect(":") as Box<Show>
+	}
+
+	fn echo2(parts: &Vec<String>) -> Box<Show> {
+		box parts.connect("_") as Box<Show>
 	}
 
 	#[test]
@@ -476,4 +631,80 @@ mod test {
 	}
 
 	test_insert!(1u8, 1u16, 1u32, 1u64, 1i8, 1i16, 1i32, 1i64, 'A', true, false)
+
+	#[test]
+	fn override_identical() {
+		let mut template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
+		template.insert("name", peter);
+		template.insert("something", nice);
+		let shell = template.override();
+		assert_eq!(template.to_str(), shell.to_str());
+	}
+
+	#[test]
+	fn override_set() {
+		let mut template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
+		template.insert("name", peter);
+		template.insert("something", nice);
+		let mut shell = template.override();
+		shell.insert("name", "Olivia");
+		assert_eq!(shell.to_str(), "Hello, Olivia! This is a nice template.".into_string());
+	}
+
+	#[test]
+	fn override_unset() {
+		let mut template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
+		template.insert("name", peter);
+		template.insert("something", nice);
+		let mut shell = template.override();
+		shell.unset("name");
+		assert_eq!(shell.to_str(), "Hello, ! This is a nice template.".into_string());
+	}
+
+	#[test]
+	fn override_condition() {
+		let mut template = monitored_from_str("Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]");
+		template.insert("name", peter);
+		template.set("condition", true);
+		let mut shell = template.override();
+		shell.set("condition", false);
+		assert_eq!(shell.to_str(), "Hello, Peter!".into_string());
+	}
+
+	#[test]
+	fn override_set_content_condition() {
+		let template = monitored_from_str("Hello[[?:name]], [[:name]][[/name]]![[?!:name]] I don't know you.[[/!name]]");
+		let mut shell = template.override();
+		shell.insert("name", peter);
+		assert_eq!(shell.to_str(), "Hello, Peter!".into_string());
+	}
+
+	#[test]
+	fn override_unset_content_condition() {
+		let mut template = monitored_from_str("Hello[[?:name]], [[:name]][[/name]]![[?!:name]] I don't know you.[[/!name]]");
+		template.insert("name", peter);
+		let mut shell = template.override();
+		shell.unset("name");
+		assert_eq!(shell.to_str(), "Hello! I don't know you.".into_string());
+	}
+
+	#[test]
+	fn override_set_generator() {
+		let mut template = monitored_from_str("[[+\"say hello\" hello Peter    \"how are\" you?]]");
+		template.insert_generator("say hello", echo);
+		let mut shell = template.override();
+		shell.insert_generator("say hello", echo2);
+
+		assert_eq!(shell.to_str(), "hello_Peter_how are_you?".into_string());
+	}
+
+	#[test]
+	fn override_unset_generator() {
+		let mut template = monitored_from_str("[[+\"say hello\" hello Peter    \"how are\" you?]]");
+		template.insert_generator("say hello", echo);
+		let mut shell = template.override();
+		shell.unset_generator("say hello");
+
+		assert_eq!(shell.to_str(), "".into_string());
+	}
 }
