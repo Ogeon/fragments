@@ -279,6 +279,12 @@ impl Template {
 			self.conditions.remove(&label.into_string());
 		}
 	}
+
+	///Create a `Shell` around this `Template`.
+	#[inline]
+	pub fn override<'a>(&'a self) -> Shell<'a> {
+		Shell::new(self as &'a Overridable)
+	}
 }
 
 impl Overridable for Template {
@@ -383,6 +389,12 @@ impl<'a> Shell<'a> {
 	pub fn set<S: StrAllocating>(&mut self, label: S, value: bool) {
 		self.conditions.insert(label.into_string(), value);
 	}
+
+	///Create an other `Shell` around this `Shell`.
+	#[inline]
+	pub fn override<'a>(&'a self) -> Shell<'a> {
+		Shell::new(self as &'a Overridable)
+	}
 }
 
 impl<'a> Overridable for Shell<'a> {
@@ -435,11 +447,6 @@ trait Overridable {
 	fn is_content_definded(&self, label: &String) -> bool;
 	fn find_generator<'a>(&'a self, label: &String) -> Option<&'a Box<Generator>>;
 	fn get_tokens<'a>(&'a self) -> &'a Vec<Token>;
-
-	///Create a `Shell` around this template.
-	fn override<'a>(&'a self) -> Shell {
-		Shell::new(self as &'a Overridable)
-	}
 }
 
 
@@ -507,7 +514,7 @@ fn format_tokens(template: &Overridable, tokens: &Vec<Token>, f: &mut fmt::Forma
 
 #[cfg(test)]
 mod test {
-	use super::{Template, Placeholder, String, Overridable};
+	use super::{Template, Placeholder, String};
 	use std::fmt::{Show, Formatter};
 	use std::fmt;
 
