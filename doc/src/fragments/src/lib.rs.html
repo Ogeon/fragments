@@ -31,7 +31,7 @@
             <div class="search-container">
                 <input class="search-input" name="search"
                        autocomplete="off"
-                       placeholder="Search documentation..."
+                       placeholder="Click or press 'S' to search, '?' for more options..."
                        type="search">
             </div>
         </form>
@@ -773,8 +773,8 @@
 
 <span class='kw'>mod</span> <span class='ident'>parser</span>;
 
-<span class='doccomment'>///Internal representation of template parts.
-</span><span class='attribute'>#[<span class='ident'>deriving</span>(<span class='ident'>PartialEq</span>, <span class='ident'>Show</span>)]</span>
+<span class='doccomment'>///Internal representation of template parts.</span>
+<span class='attribute'>#[<span class='ident'>deriving</span>(<span class='ident'>PartialEq</span>, <span class='ident'>Show</span>)]</span>
 <span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>Token</span> {
 	<span class='ident'>String</span>(<span class='ident'>String</span>),
 	<span class='ident'>Placeholder</span>(<span class='ident'>String</span>),
@@ -783,10 +783,10 @@
 	<span class='ident'>Generated</span>(<span class='ident'>String</span>, <span class='ident'>Vec</span><span class='op'>&lt;</span><span class='ident'>String</span><span class='op'>&gt;</span>)
 }
 
-<span class='doccomment'>///Container enum for template content
-</span><span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>ContentType</span> {
-	<span class='ident'>Float</span>(<span class='ident'>f64</span>, <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>uint</span><span class='op'>&gt;</span>), <span class='doccomment'>///A float with an optional precision
-</span>	<span class='ident'>Int</span>(<span class='ident'>i64</span>),
+<span class='doccomment'>///Container enum for template content</span>
+<span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>ContentType</span> {
+	<span class='ident'>Float</span>(<span class='ident'>f64</span>, <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>uint</span><span class='op'>&gt;</span>), <span class='doccomment'>///A float with an optional precision</span>
+	<span class='ident'>Int</span>(<span class='ident'>i64</span>),
 	<span class='ident'>UnsignedInt</span>(<span class='ident'>u64</span>),
 	<span class='ident'>Char</span>(<span class='ident'>char</span>),
 	<span class='ident'>Bool</span>(<span class='ident'>bool</span>),
@@ -831,16 +831,16 @@
 }
 
 
-<span class='doccomment'>///A trait for types that can be inserted into templates
-</span><span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>TemplateContent</span> {
-	<span class='doccomment'>///Convert `self` to a suitable `ContentType` variant, not making a copy if possible.
-</span>	<span class='kw'>fn</span> <span class='ident'>into_template_content</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>ContentType</span>;
+<span class='doccomment'>///A trait for types that can be inserted into templates</span>
+<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>TemplateContent</span> {
+	<span class='doccomment'>///Convert `self` to a suitable `ContentType` variant, not making a copy if possible.</span>
+	<span class='kw'>fn</span> <span class='ident'>into_template_content</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>ContentType</span>;
 }
 
-<span class='doccomment'>///A trait for types that can be copied and inserted into templates
-</span><span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>CopyTemplateContent</span> {
-	<span class='doccomment'>///Copy and convert `self` to a suitable `ContentType` variant.
-</span>	<span class='kw'>fn</span> <span class='ident'>to_template_content</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>ContentType</span>;
+<span class='doccomment'>///A trait for types that can be copied and inserted into templates</span>
+<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>CopyTemplateContent</span> {
+	<span class='doccomment'>///Copy and convert `self` to a suitable `ContentType` variant.</span>
+	<span class='kw'>fn</span> <span class='ident'>to_template_content</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>ContentType</span>;
 }
 
 <span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>float_content</span>(
@@ -946,41 +946,41 @@
 	}
 }
 
-<span class='doccomment'>///A string template with placeholders and conditional content.
-</span><span class='doccomment'>///
-</span><span class='doccomment'>///Placeholders are written as `[[:label]]`, where `label` becomes the name of the placeholder.
-</span><span class='doccomment'>///The label is then used to insert content: `my_template.insert(&quot;label&quot;, my_content);`.
-</span><span class='doccomment'>///The assigned content for a placeholder can be anything that implements `Show`.
-</span><span class='doccomment'>///Even other templates may be inserted, which allows a more atomic structure.
-</span><span class='doccomment'>///
-</span><span class='doccomment'>///Conditional segments are surrounded by `[[?label]]...[[/]]`, where `label` becomes the name of the condition,
-</span><span class='doccomment'>///and they are used to display content depending on whether its label exists in the `conditions` set.
-</span><span class='doccomment'>///`[[/]]` marks the end of a block and may contain other characters after the `/`, which may be useful for labeling the end mark.
-</span><span class='doccomment'>///Conditions can be made negative by writing `[[?!label]]...[[/]]`, which makes the content visible if the label
-</span><span class='doccomment'>///is missing from the `conditions` set. Conditional segments can also depend on whether a placeholder has an assigned value. 
-</span><span class='doccomment'>///Just write them like this: `[[?:label]]...[[/]]` or `[[?!:label]]...[[/]]`.
-</span><span class='doccomment'>///
-</span><span class='doccomment'>///Content can also be generated, using a generator token: `[[+label arg1 arg2 ...]]`. The label and the arguments are
-</span><span class='doccomment'>///separated by one or more whitespaces. They can also be quoted to prevent special characters from being parsed:
-</span><span class='doccomment'>///`[[+&quot;my label&quot; arg1 &quot;[[arg2]]&quot;]]`. The arguments will be passed to an instance of the `Generator` trait and the
-</span><span class='doccomment'>///result will be inserted into the content.
-</span><span class='doccomment'>///
-</span><span class='doccomment'>///Any character can be escaped by writing `\` before it. It can be used like this: `\[[[:label1]], [[:label2]]]`
-</span><span class='doccomment'>///which will result in `[content1, content2]`, since the first `[` will be ignored by the parser and added to the
-</span><span class='doccomment'>///rest of the content.
-</span><span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>Template</span> {
-	<span class='doccomment'>///Content for the placeholders
-</span>	<span class='kw'>pub</span> <span class='ident'>content</span>: <span class='ident'>HashMap</span><span class='op'>&lt;</span><span class='ident'>String</span>, <span class='ident'>ContentType</span><span class='op'>&gt;</span>,
-	<span class='doccomment'>///Content generators
-</span>	<span class='kw'>pub</span> <span class='ident'>generators</span>: <span class='ident'>HashMap</span><span class='op'>&lt;</span><span class='ident'>String</span>, <span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Generator</span><span class='op'>&gt;&gt;</span>,
-	<span class='doccomment'>///Conditional switches
-</span>	<span class='kw'>pub</span> <span class='ident'>conditions</span>: <span class='ident'>HashSet</span><span class='op'>&lt;</span><span class='ident'>String</span><span class='op'>&gt;</span>,
+<span class='doccomment'>///A string template with placeholders and conditional content.</span>
+<span class='doccomment'>///</span>
+<span class='doccomment'>///Placeholders are written as `[[:label]]`, where `label` becomes the name of the placeholder.</span>
+<span class='doccomment'>///The label is then used to insert content: `my_template.insert(&quot;label&quot;, my_content);`.</span>
+<span class='doccomment'>///The assigned content for a placeholder can be anything that implements `Show`.</span>
+<span class='doccomment'>///Even other templates may be inserted, which allows a more atomic structure.</span>
+<span class='doccomment'>///</span>
+<span class='doccomment'>///Conditional segments are surrounded by `[[?label]]...[[/]]`, where `label` becomes the name of the condition,</span>
+<span class='doccomment'>///and they are used to display content depending on whether its label exists in the `conditions` set.</span>
+<span class='doccomment'>///`[[/]]` marks the end of a block and may contain other characters after the `/`, which may be useful for labeling the end mark.</span>
+<span class='doccomment'>///Conditions can be made negative by writing `[[?!label]]...[[/]]`, which makes the content visible if the label</span>
+<span class='doccomment'>///is missing from the `conditions` set. Conditional segments can also depend on whether a placeholder has an assigned value. </span>
+<span class='doccomment'>///Just write them like this: `[[?:label]]...[[/]]` or `[[?!:label]]...[[/]]`.</span>
+<span class='doccomment'>///</span>
+<span class='doccomment'>///Content can also be generated, using a generator token: `[[+label arg1 arg2 ...]]`. The label and the arguments are</span>
+<span class='doccomment'>///separated by one or more whitespaces. They can also be quoted to prevent special characters from being parsed:</span>
+<span class='doccomment'>///`[[+&quot;my label&quot; arg1 &quot;[[arg2]]&quot;]]`. The arguments will be passed to an instance of the `Generator` trait and the</span>
+<span class='doccomment'>///result will be inserted into the content.</span>
+<span class='doccomment'>///</span>
+<span class='doccomment'>///Any character can be escaped by writing `\` before it. It can be used like this: `\[[[:label1]], [[:label2]]]`</span>
+<span class='doccomment'>///which will result in `[content1, content2]`, since the first `[` will be ignored by the parser and added to the</span>
+<span class='doccomment'>///rest of the content.</span>
+<span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>Template</span> {
+	<span class='doccomment'>///Content for the placeholders</span>
+	<span class='kw'>pub</span> <span class='ident'>content</span>: <span class='ident'>HashMap</span><span class='op'>&lt;</span><span class='ident'>String</span>, <span class='ident'>ContentType</span><span class='op'>&gt;</span>,
+	<span class='doccomment'>///Content generators</span>
+	<span class='kw'>pub</span> <span class='ident'>generators</span>: <span class='ident'>HashMap</span><span class='op'>&lt;</span><span class='ident'>String</span>, <span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Generator</span><span class='op'>&gt;&gt;</span>,
+	<span class='doccomment'>///Conditional switches</span>
+	<span class='kw'>pub</span> <span class='ident'>conditions</span>: <span class='ident'>HashSet</span><span class='op'>&lt;</span><span class='ident'>String</span><span class='op'>&gt;</span>,
 	<span class='ident'>tokens</span>: <span class='ident'>Vec</span><span class='op'>&lt;</span><span class='ident'>Token</span><span class='op'>&gt;</span>
 }
 
 <span class='kw'>impl</span> <span class='ident'>Template</span> {
-	<span class='doccomment'>///Create a new `Template` from a character iterator.
-</span>	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
+	<span class='doccomment'>///Create a new `Template` from a character iterator.</span>
+	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
 	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>from_chars</span>(<span class='ident'>b</span>: <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>std</span>::<span class='ident'>str</span>::<span class='ident'>Chars</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>Template</span>, <span class='ident'>String</span><span class='op'>&gt;</span> {
 		<span class='kw'>let</span> <span class='ident'>tokens</span> <span class='op'>=</span> <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>parser</span>::<span class='ident'>parse</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>b</span>.<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>r</span><span class='op'>|</span> <span class='prelude-val'>Ok</span>::<span class='op'>&lt;</span><span class='ident'>char</span>, <span class='ident'>String</span><span class='op'>&gt;</span>(<span class='ident'>r</span>))));
 
@@ -992,8 +992,8 @@
 		})
 	}
 
-	<span class='doccomment'>///Create a new `Template` from a buffer.
-</span>	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
+	<span class='doccomment'>///Create a new `Template` from a buffer.</span>
+	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
 	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>from_buffer</span><span class='op'>&lt;</span><span class='ident'>T</span>: <span class='ident'>Buffer</span><span class='op'>&gt;</span>(<span class='ident'>b</span>: <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>T</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>Template</span>, <span class='ident'>String</span><span class='op'>&gt;</span> {
 		<span class='kw'>let</span> <span class='ident'>tokens</span> <span class='op'>=</span> <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>parser</span>::<span class='ident'>parse</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>b</span>.<span class='ident'>chars</span>().<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>r</span><span class='op'>|</span> <span class='kw'>match</span> <span class='ident'>r</span> {
 			<span class='prelude-val'>Ok</span>(<span class='ident'>c</span>) <span class='op'>=&gt;</span> <span class='prelude-val'>Ok</span>(<span class='ident'>c</span>),
@@ -1008,26 +1008,26 @@
 		})
 	}
 
-	<span class='doccomment'>///Insert content.
-</span>	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
+	<span class='doccomment'>///Insert content.</span>
+	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
 	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>insert</span><span class='op'>&lt;</span><span class='ident'>S</span>: <span class='ident'>StrAllocating</span>, <span class='ident'>T</span>: <span class='ident'>TemplateContent</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>label</span>: <span class='ident'>S</span>, <span class='ident'>item</span>: <span class='ident'>T</span>) {
 		<span class='self'>self</span>.<span class='ident'>content</span>.<span class='ident'>insert</span>(<span class='ident'>label</span>.<span class='ident'>into_string</span>(), <span class='ident'>item</span>.<span class='ident'>into_template_content</span>());
 	}
 
-	<span class='doccomment'>///Insert a formatted float.
-</span>	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
+	<span class='doccomment'>///Insert a formatted float.</span>
+	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
 	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>insert_float</span><span class='op'>&lt;</span><span class='ident'>S</span>: <span class='ident'>StrAllocating</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>label</span>: <span class='ident'>S</span>, <span class='ident'>item</span>: <span class='ident'>f64</span>, <span class='ident'>precision</span>: <span class='ident'>uint</span>) {
 		<span class='self'>self</span>.<span class='ident'>content</span>.<span class='ident'>insert</span>(<span class='ident'>label</span>.<span class='ident'>into_string</span>(), <span class='ident'>Float</span>(<span class='ident'>item</span>, <span class='prelude-val'>Some</span>(<span class='ident'>precision</span>)));
 	}
 
-	<span class='doccomment'>///Insert a content generator.
-</span>	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
+	<span class='doccomment'>///Insert a content generator.</span>
+	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
 	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>insert_generator</span><span class='op'>&lt;</span><span class='ident'>S</span>: <span class='ident'>StrAllocating</span>, <span class='ident'>T</span>: <span class='ident'>Generator</span> <span class='op'>+</span> <span class='ident'>Send</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>label</span>: <span class='ident'>S</span>, <span class='ident'>gen</span>: <span class='ident'>T</span>) {
 		<span class='self'>self</span>.<span class='ident'>generators</span>.<span class='ident'>insert</span>(<span class='ident'>label</span>.<span class='ident'>into_string</span>(), <span class='kw'>box</span> <span class='ident'>gen</span> <span class='kw'>as</span> <span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Generator</span><span class='op'>&gt;</span>);
 	}
 
-	<span class='doccomment'>///Set a condition.
-</span>	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
+	<span class='doccomment'>///Set a condition.</span>
+	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
 	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>set</span><span class='op'>&lt;</span><span class='ident'>S</span>: <span class='ident'>StrAllocating</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>label</span>: <span class='ident'>S</span>, <span class='ident'>value</span>: <span class='ident'>bool</span>) {
 		<span class='kw'>if</span> <span class='ident'>value</span> {
 			<span class='self'>self</span>.<span class='ident'>conditions</span>.<span class='ident'>insert</span>(<span class='ident'>label</span>.<span class='ident'>into_string</span>());
@@ -1036,8 +1036,8 @@
 		}
 	}
 
-	<span class='doccomment'>///Create a `Shell` around this `Template`.
-</span>	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
+	<span class='doccomment'>///Create a `Shell` around this `Template`.</span>
+	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
 	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>override</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>Shell</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
 		<span class='ident'>Shell</span>::<span class='ident'>new</span>(<span class='self'>self</span> <span class='kw'>as</span> <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> <span class='ident'>Overridable</span>)
 	}
@@ -1066,8 +1066,8 @@
 }
 
 <span class='kw'>impl</span> <span class='ident'>FromStr</span> <span class='kw'>for</span> <span class='ident'>Template</span> {
-	<span class='doccomment'>///Creates a new `Template` from a string.
-</span>	<span class='kw'>fn</span> <span class='ident'>from_str</span>(<span class='ident'>s</span>: <span class='kw-2'>&amp;</span><span class='ident'>str</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Template</span><span class='op'>&gt;</span> {
+	<span class='doccomment'>///Creates a new `Template` from a string.</span>
+	<span class='kw'>fn</span> <span class='ident'>from_str</span>(<span class='ident'>s</span>: <span class='kw-2'>&amp;</span><span class='ident'>str</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Template</span><span class='op'>&gt;</span> {
 		<span class='kw'>match</span> <span class='ident'>Template</span>::<span class='ident'>from_chars</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>s</span>.<span class='ident'>chars</span>()) {
 			<span class='prelude-val'>Ok</span>(<span class='ident'>template</span>) <span class='op'>=&gt;</span> <span class='prelude-val'>Some</span>(<span class='ident'>template</span>),
 			<span class='prelude-val'>Err</span>(_) <span class='op'>=&gt;</span> <span class='prelude-val'>None</span>
@@ -1085,23 +1085,23 @@
 
 
 
-<span class='doccomment'>///A `Shell` is a layer on top of an overridable template.
-</span><span class='doccomment'>///
-</span><span class='doccomment'>///Shells can be used to assign different values to a template and still
-</span><span class='doccomment'>///keep the original intact.
-</span><span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>Shell</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='doccomment'>///Content for the placeholders
-</span>	<span class='kw'>pub</span> <span class='ident'>content</span>: <span class='ident'>HashMap</span><span class='op'>&lt;</span><span class='ident'>String</span>, <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>ContentType</span><span class='op'>&gt;&gt;</span>,
-	<span class='doccomment'>///Content generators
-</span>	<span class='kw'>pub</span> <span class='ident'>generators</span>: <span class='ident'>HashMap</span><span class='op'>&lt;</span><span class='ident'>String</span>, <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Generator</span><span class='op'>&gt;&gt;</span><span class='op'>&gt;</span>,
-	<span class='doccomment'>///Conditional switches
-</span>	<span class='kw'>pub</span> <span class='ident'>conditions</span>: <span class='ident'>HashMap</span><span class='op'>&lt;</span><span class='ident'>String</span>, <span class='ident'>bool</span><span class='op'>&gt;</span>,
+<span class='doccomment'>///A `Shell` is a layer on top of an overridable template.</span>
+<span class='doccomment'>///</span>
+<span class='doccomment'>///Shells can be used to assign different values to a template and still</span>
+<span class='doccomment'>///keep the original intact.</span>
+<span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>Shell</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
+    <span class='doccomment'>///Content for the placeholders</span>
+	<span class='kw'>pub</span> <span class='ident'>content</span>: <span class='ident'>HashMap</span><span class='op'>&lt;</span><span class='ident'>String</span>, <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>ContentType</span><span class='op'>&gt;&gt;</span>,
+	<span class='doccomment'>///Content generators</span>
+	<span class='kw'>pub</span> <span class='ident'>generators</span>: <span class='ident'>HashMap</span><span class='op'>&lt;</span><span class='ident'>String</span>, <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Generator</span><span class='op'>&gt;&gt;</span><span class='op'>&gt;</span>,
+	<span class='doccomment'>///Conditional switches</span>
+	<span class='kw'>pub</span> <span class='ident'>conditions</span>: <span class='ident'>HashMap</span><span class='op'>&lt;</span><span class='ident'>String</span>, <span class='ident'>bool</span><span class='op'>&gt;</span>,
     <span class='ident'>base</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> <span class='ident'>Overridable</span>
 }
 
 <span class='kw'>impl</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> <span class='ident'>Shell</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-	<span class='doccomment'>///Create a new `Shell` around `base`.
-</span>	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>new</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>(<span class='ident'>base</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> <span class='ident'>Overridable</span>) <span class='op'>-&gt;</span> <span class='ident'>Shell</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
+	<span class='doccomment'>///Create a new `Shell` around `base`.</span>
+	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>new</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>(<span class='ident'>base</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> <span class='ident'>Overridable</span>) <span class='op'>-&gt;</span> <span class='ident'>Shell</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
 		<span class='ident'>Shell</span> {
 			<span class='ident'>content</span>: <span class='ident'>HashMap</span>::<span class='ident'>new</span>(),
 			<span class='ident'>generators</span>: <span class='ident'>HashMap</span>::<span class='ident'>new</span>(),
@@ -1110,44 +1110,44 @@
 		}
 	}
 
-	<span class='doccomment'>///Insert content.
-</span>	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
+	<span class='doccomment'>///Insert content.</span>
+	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
 	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>insert</span><span class='op'>&lt;</span><span class='ident'>S</span>: <span class='ident'>StrAllocating</span>, <span class='ident'>T</span>: <span class='ident'>TemplateContent</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>label</span>: <span class='ident'>S</span>, <span class='ident'>item</span>: <span class='ident'>T</span>) {
 		<span class='self'>self</span>.<span class='ident'>content</span>.<span class='ident'>insert</span>(<span class='ident'>label</span>.<span class='ident'>into_string</span>(), <span class='prelude-val'>Some</span>(<span class='ident'>item</span>.<span class='ident'>into_template_content</span>()));
 	}
 
-	<span class='doccomment'>///Unset content.
-</span>	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
+	<span class='doccomment'>///Unset content.</span>
+	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
 	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>unset</span><span class='op'>&lt;</span><span class='ident'>S</span>: <span class='ident'>StrAllocating</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>label</span>: <span class='ident'>S</span>) {
 		<span class='self'>self</span>.<span class='ident'>content</span>.<span class='ident'>insert</span>(<span class='ident'>label</span>.<span class='ident'>into_string</span>(), <span class='prelude-val'>None</span>);
 	}
 
-	<span class='doccomment'>///Insert a formatted float.
-</span>	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
+	<span class='doccomment'>///Insert a formatted float.</span>
+	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
 	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>insert_float</span><span class='op'>&lt;</span><span class='ident'>S</span>: <span class='ident'>StrAllocating</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>label</span>: <span class='ident'>S</span>, <span class='ident'>item</span>: <span class='ident'>f64</span>, <span class='ident'>precision</span>: <span class='ident'>uint</span>) {
 		<span class='self'>self</span>.<span class='ident'>content</span>.<span class='ident'>insert</span>(<span class='ident'>label</span>.<span class='ident'>into_string</span>(), <span class='prelude-val'>Some</span>(<span class='ident'>Float</span>(<span class='ident'>item</span>, <span class='prelude-val'>Some</span>(<span class='ident'>precision</span>))));
 	}
 
-	<span class='doccomment'>///Insert a content generator.
-</span>	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
+	<span class='doccomment'>///Insert a content generator.</span>
+	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
 	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>insert_generator</span><span class='op'>&lt;</span><span class='ident'>S</span>: <span class='ident'>StrAllocating</span>, <span class='ident'>T</span>: <span class='ident'>Generator</span> <span class='op'>+</span> <span class='ident'>Send</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>label</span>: <span class='ident'>S</span>, <span class='ident'>gen</span>: <span class='ident'>T</span>) {
 		<span class='self'>self</span>.<span class='ident'>generators</span>.<span class='ident'>insert</span>(<span class='ident'>label</span>.<span class='ident'>into_string</span>(), <span class='prelude-val'>Some</span>(<span class='kw'>box</span> <span class='ident'>gen</span> <span class='kw'>as</span> <span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Generator</span><span class='op'>&gt;</span>));
 	}
 
-	<span class='doccomment'>///Unset a content generator.
-</span>	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
+	<span class='doccomment'>///Unset a content generator.</span>
+	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
 	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>unset_generator</span><span class='op'>&lt;</span><span class='ident'>S</span>: <span class='ident'>StrAllocating</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>label</span>: <span class='ident'>S</span>) {
 		<span class='self'>self</span>.<span class='ident'>generators</span>.<span class='ident'>insert</span>(<span class='ident'>label</span>.<span class='ident'>into_string</span>(), <span class='prelude-val'>None</span>);
 	}
 
-	<span class='doccomment'>///Set a condition.
-</span>	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
+	<span class='doccomment'>///Set a condition.</span>
+	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
 	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>set</span><span class='op'>&lt;</span><span class='ident'>S</span>: <span class='ident'>StrAllocating</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>label</span>: <span class='ident'>S</span>, <span class='ident'>value</span>: <span class='ident'>bool</span>) {
 		<span class='self'>self</span>.<span class='ident'>conditions</span>.<span class='ident'>insert</span>(<span class='ident'>label</span>.<span class='ident'>into_string</span>(), <span class='ident'>value</span>);
 	}
 
-	<span class='doccomment'>///Create an other `Shell` around this `Shell`.
-</span>	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
+	<span class='doccomment'>///Create an other `Shell` around this `Shell`.</span>
+	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
 	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>override</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>Shell</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
 		<span class='ident'>Shell</span>::<span class='ident'>new</span>(<span class='self'>self</span> <span class='kw'>as</span> <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> <span class='ident'>Overridable</span>)
 	}
@@ -1196,8 +1196,8 @@
 
 
 
-<span class='doccomment'>///A trait for overridable templates.
-</span><span class='kw'>trait</span> <span class='ident'>Overridable</span> {
+<span class='doccomment'>///A trait for overridable templates.</span>
+<span class='kw'>trait</span> <span class='ident'>Overridable</span> {
 	<span class='kw'>fn</span> <span class='ident'>find_content</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> <span class='self'>self</span>, <span class='ident'>label</span>: <span class='kw-2'>&amp;</span><span class='ident'>String</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> <span class='ident'>ContentType</span><span class='op'>&gt;</span>;
 	<span class='kw'>fn</span> <span class='ident'>get_condition</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>label</span>: <span class='kw-2'>&amp;</span><span class='ident'>String</span>) <span class='op'>-&gt;</span> <span class='ident'>bool</span>;
 	<span class='kw'>fn</span> <span class='ident'>is_content_definded</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>label</span>: <span class='kw-2'>&amp;</span><span class='ident'>String</span>) <span class='op'>-&gt;</span> <span class='ident'>bool</span>;
@@ -1206,8 +1206,8 @@
 }
 
 
-<span class='doccomment'>///A trait for content generators.
-</span><span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>Generator</span> {
+<span class='doccomment'>///A trait for content generators.</span>
+<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>Generator</span> {
 	<span class='kw'>fn</span> <span class='ident'>generate</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>args</span>: <span class='kw-2'>&amp;</span><span class='ident'>Vec</span><span class='op'>&lt;</span><span class='ident'>String</span><span class='op'>&gt;</span>, <span class='ident'>formatter</span>:  <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>fmt</span>::<span class='ident'>Formatter</span>) <span class='op'>-&gt;</span> <span class='ident'>fmt</span>::<span class='prelude-ty'>Result</span>;
 }
 
@@ -1484,9 +1484,9 @@
                 <dd>Show this help dialog</dd>
                 <dt>S</dt>
                 <dd>Focus the search field</dd>
-                <dt>&uarr;</dt>
+                <dt>&larrb;</dt>
                 <dd>Move up in search results</dd>
-                <dt>&darr;</dt>
+                <dt>&rarrb;</dt>
                 <dd>Move down in search results</dd>
                 <dt>&#9166;</dt>
                 <dd>Go to active search result</dd>
