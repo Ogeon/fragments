@@ -632,7 +632,7 @@ mod test {
 		let mut template = monitored_from_str("[[:short]], [[:long]], [[:default]]");
 		template.insert_float("short", 1.2, 1);
 		template.insert_float("long", 1.2, 4);
-		template.insert("default", 1.2);
+		template.insert("default", 1.2f32);
 		assert_eq!(template.to_str(), "1.2, 1.2000, 1.2".into_string())
 	}
 
