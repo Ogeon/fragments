@@ -1388,7 +1388,7 @@
 		<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>template</span> <span class='op'>=</span> <span class='ident'>monitored_from_str</span>(<span class='string'>&quot;[[:short]], [[:long]], [[:default]]&quot;</span>);
 		<span class='ident'>template</span>.<span class='ident'>insert_float</span>(<span class='string'>&quot;short&quot;</span>, <span class='number'>1.2</span>, <span class='number'>1</span>);
 		<span class='ident'>template</span>.<span class='ident'>insert_float</span>(<span class='string'>&quot;long&quot;</span>, <span class='number'>1.2</span>, <span class='number'>4</span>);
-		<span class='ident'>template</span>.<span class='ident'>insert</span>(<span class='string'>&quot;default&quot;</span>, <span class='number'>1.2</span>);
+		<span class='ident'>template</span>.<span class='ident'>insert</span>(<span class='string'>&quot;default&quot;</span>, <span class='number'>1.2f32</span>);
 		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>to_str</span>(), <span class='string'>&quot;1.2, 1.2000, 1.2&quot;</span>.<span class='ident'>into_string</span>())
 	}
 
