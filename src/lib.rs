@@ -1,4 +1,4 @@
-#![crate_id = "fragments#0.1-pre"]
+#![crate_name = "fragments"]
 
 #![comment = "A simple template library for Rust"]
 #![license = "MIT"]
