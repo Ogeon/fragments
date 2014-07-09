@@ -9,6 +9,17 @@ Online documentation can be found [here](http://ogeon.github.io/fragments/doc/fr
 
 #Getting started
 
+Fragments supports building through both the Cargo package manager and `make`.
+
+##Using Cargo
+Add the following lines to your `Cargo.toml` file:
+```toml
+[dependencies.fragments]
+
+git = "https://github.com/Ogeon/fragments"
+```
+
+##Using `make`
 Simply clone the repository an build it like this:
 
 ```shell

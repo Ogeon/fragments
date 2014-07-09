@@ -1,0 +1,10 @@
+[package]
+
+name = "fragments"
+version = "0.1.0-pre"
+authors = ["hello@erikhedvall.nu"]
+
+[[lib]]
+
+name = "fragments"
+path = "src/lib.rs"

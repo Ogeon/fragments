@@ -3,8 +3,11 @@ env:
     - secure: Q30qm7Uj+tO65CMrEbqPXAeeY439lf+qLR77LozWuJJ318/1w6lAyaL2s5o2uQ86fQvJKQkabnabtuqBv+y+jW5P7LXXHPe0xr8VWg+9/hIje6FoyrTO9HqfG6X4tbZZMZUzSWJcUrqZdex/A0ot8BWH4FgDxMxa5FN6HOeTP3Y=
     - secure: "ZjdcfLU0lNHyf5exUt2PKXA55Mjb6rQVMLMAaqHOjNdsPKaZ2nIiOSJ5M01nzBalZTPNom7lJfmOIClh24XbP/q3+l0pB/yspzk3Dsfi4S9MfShxjqvmW/z4MaceTYef1eEV+6bulJry/kQouhDkOUfqsF8usvxedLa61vNgZ1k="
 install:
+  - curl http://static.rust-lang.org/cargo-dist/cargo-nightly-linux.tar.gz |
+    sudo tar --strip-components 1 -C /usr -xzf -
   - curl -s http://www.rust-lang.org/rustup.sh | sudo sh
 script:
+  - cargo build
   - make
   - make test
   - make docs
