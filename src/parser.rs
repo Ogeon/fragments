@@ -295,6 +295,6 @@ fn parse_generator<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) -> R
 }
 
 fn parse_block_end<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) {
-	tokens.by_ref().advance(|t| t != End);
+	tokens.by_ref().all(|t| t != End);
 }
 
