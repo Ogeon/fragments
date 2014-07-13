@@ -41,10 +41,10 @@ pub enum ContentType {
 }
 
 macro_rules! call_fmt(
-	($($p:pat => $b:expr),+ and $($t:ident),+) => (
-		match self {
+	($slf:ident, $f:ident: $($p:pat => $b:expr),+ and $($t:ident),+) => (
+		match $slf {
 			$($p => $b,)+
-			$(&$t(ref v) => v.fmt(f)),+
+			$(&$t(ref v) => v.fmt($f)),+
 		}
 	)
 )
@@ -52,6 +52,8 @@ macro_rules! call_fmt(
 impl fmt::Show for ContentType {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		call_fmt! {
+			self,
+			f:
 			&Float(v, p) => {
 				let prev_p = f.precision;
 				f.precision = p;
