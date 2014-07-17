@@ -46,7 +46,10 @@ fn main() {
 	//Load the content of a file into a Template
 	//The file contains the text 'Hello, [[:name]]!', in this example
 	let file = File::open(&Path::new("path/to/my/template.txt"));
-	let mut template = Template::from_buffer(&mut BufferedReader::new(file));
+	let mut template = match Template::from_buffer(&mut BufferedReader::new(file)) {
+		Ok(template) => template,
+		Err(e) => fail!(e)
+	};
 
 	//Insert something into the `name` placeholder
 	template.insert("name", "Peter");
@@ -136,13 +139,14 @@ result will be inserted into the content.
 ```rust
 extern crate fragments;
 use fragments::Template;
+use std::fmt::Show;
+use std::fmt;
 
 //This function will just concatenate the arguments.
 //I expect you to make cooler generators, yourself ;)
-fn join(parts: &Vec<StrBuf>) -> Box<Show> {
-	box parts.concat() as Box<Show>
+fn join(parts: &Vec<String>, f: &mut fmt::Formatter) -> fmt::Result {
+	parts.concat().fmt(f)
 }
-
 
 fn main() {
 	//Create a new Template from a string
@@ -151,7 +155,7 @@ fn main() {
 	//Insert something into the `name` placeholder
 	template.insert("name", "Peter");
 
-	//Functions with the signature `fn(&Vec<StrBuf>) -> Box<Show>` will automatically implement the `Generator` trait
+	//Functions with the signature `fn(&Vec<String>) -> Box<Show>` will automatically implement the `Generator` trait
 	template.insert_generator("join", join);
 
 	//Result: "Hello, Peter! Is it written as 'white space' or 'whitespace'?"
