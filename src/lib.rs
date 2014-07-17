@@ -554,11 +554,11 @@ mod test {
 	#[test]
 	fn basic_tokens() {
 		let template: Template = from_str("Hello, [[:name]]! This is a [[:something]] template.").unwrap();
-		assert_eq!(template.tokens.get(0), &String("Hello, ".into_string()));
-		assert_eq!(template.tokens.get(1), &Placeholder("name".into_string()));
-		assert_eq!(template.tokens.get(2), &String("! This is a ".into_string()));
-		assert_eq!(template.tokens.get(3), &Placeholder("something".into_string()));
-		assert_eq!(template.tokens.get(4), &String(" template.".into_string()));
+		assert_eq!(template.tokens[0], String("Hello, ".into_string()));
+		assert_eq!(template.tokens[1], Placeholder("name".into_string()));
+		assert_eq!(template.tokens[2], String("! This is a ".into_string()));
+		assert_eq!(template.tokens[3], Placeholder("something".into_string()));
+		assert_eq!(template.tokens[4], String(" template.".into_string()));
 	}
 
 	#[test]
@@ -570,9 +570,9 @@ mod test {
 	#[test]
 	fn escaped_tokens() {
 		let template = monitored_from_str("Hello, [[:name]]! Write placeholders like \\[[:this]] and escape them like \\\\\\[[:this]]");
-		assert_eq!(template.tokens.get(0), &String("Hello, ".into_string()));
-		assert_eq!(template.tokens.get(1), &Placeholder("name".into_string()));
-		assert_eq!(template.tokens.get(2), &String("! Write placeholders like [[:this]] and escape them like \\[[:this]]".into_string()));
+		assert_eq!(template.tokens[0], String("Hello, ".into_string()));
+		assert_eq!(template.tokens[1], Placeholder("name".into_string()));
+		assert_eq!(template.tokens[2], String("! Write placeholders like [[:this]] and escape them like \\[[:this]]".into_string()));
 	}
 
 	#[test]
