@@ -6,8 +6,7 @@ install:
   - curl -s http://www.rust-lang.org/rustup.sh | sudo sh
 script:
   - cargo build
-  - make
-  - make test
+  - cargo test
   - make docs
 after_script:
   - curl http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN | bash
