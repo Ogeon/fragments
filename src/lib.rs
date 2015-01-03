@@ -1,10 +1,3 @@
-#![crate_name = "fragments"]
-
-#![comment = "A simple template library for Rust"]
-#![license = "MIT"]
-#![crate_type = "lib"]
-#![crate_type = "rlib"]
-
 #![doc(html_root_url = "http://ogeon.github.io/fragments/doc/")]
 
 #![feature(macro_rules)]
