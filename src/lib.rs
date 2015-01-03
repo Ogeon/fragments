@@ -284,7 +284,7 @@ impl Template {
 
 	///Create a `Shell` around this `Template`.
 	#[inline]
-	pub fn override<'a>(&'a self) -> Shell<'a> {
+	pub fn wrap<'a>(&'a self) -> Shell<'a> {
 		Shell::new(self as &'a Overridable)
 	}
 }
@@ -394,7 +394,7 @@ impl<'a> Shell<'a> {
 
 	///Create an other `Shell` around this `Shell`.
 	#[inline]
-	pub fn override<'a>(&'a self) -> Shell<'a> {
+	pub fn wrap<'a>(&'a self) -> Shell<'a> {
 		Shell::new(self as &'a Overridable)
 	}
 }
@@ -641,76 +641,76 @@ mod test {
 	test_insert!(1u8, 1u16, 1u32, 1u64, 1i8, 1i16, 1i32, 1i64, 'A', true, false);
 
 	#[test]
-	fn override_identical() {
+	fn wrap_identical() {
 		let mut template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
 		template.insert("name", peter);
 		template.insert("something", nice);
-		let shell = template.override();
+		let shell = template.wrap();
 		assert_eq!(template.to_string(), shell.to_string());
 	}
 
 	#[test]
-	fn override_set() {
+	fn wrap_set() {
 		let mut template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
 		template.insert("name", peter);
 		template.insert("something", nice);
-		let mut shell = template.override();
+		let mut shell = template.wrap();
 		shell.insert("name", "Olivia");
 		assert_eq!(shell.to_string(), "Hello, Olivia! This is a nice template.".into_string());
 	}
 
 	#[test]
-	fn override_unset() {
+	fn wrap_unset() {
 		let mut template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
 		template.insert("name", peter);
 		template.insert("something", nice);
-		let mut shell = template.override();
+		let mut shell = template.wrap();
 		shell.unset("name");
 		assert_eq!(shell.to_string(), "Hello, ! This is a nice template.".into_string());
 	}
 
 	#[test]
-	fn override_condition() {
+	fn wrap_condition() {
 		let mut template = monitored_from_str("Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]");
 		template.insert("name", peter);
 		template.set("condition", true);
-		let mut shell = template.override();
+		let mut shell = template.wrap();
 		shell.set("condition", false);
 		assert_eq!(shell.to_string(), "Hello, Peter!".into_string());
 	}
 
 	#[test]
-	fn override_set_content_condition() {
+	fn wrap_set_content_condition() {
 		let template = monitored_from_str("Hello[[?:name]], [[:name]][[/name]]![[?!:name]] I don't know you.[[/!name]]");
-		let mut shell = template.override();
+		let mut shell = template.wrap();
 		shell.insert("name", peter);
 		assert_eq!(shell.to_string(), "Hello, Peter!".into_string());
 	}
 
 	#[test]
-	fn override_unset_content_condition() {
+	fn wrap_unset_content_condition() {
 		let mut template = monitored_from_str("Hello[[?:name]], [[:name]][[/name]]![[?!:name]] I don't know you.[[/!name]]");
 		template.insert("name", peter);
-		let mut shell = template.override();
+		let mut shell = template.wrap();
 		shell.unset("name");
 		assert_eq!(shell.to_string(), "Hello! I don't know you.".into_string());
 	}
 
 	#[test]
-	fn override_set_generator() {
+	fn wrap_set_generator() {
 		let mut template = monitored_from_str("[[+\"say hello\" hello Peter    \"how are\" you?]]");
 		template.insert_generator("say hello", echo);
-		let mut shell = template.override();
+		let mut shell = template.wrap();
 		shell.insert_generator("say hello", echo2);
 
 		assert_eq!(shell.to_string(), "hello_Peter_how are_you?".into_string());
 	}
 
 	#[test]
-	fn override_unset_generator() {
+	fn wrap_unset_generator() {
 		let mut template = monitored_from_str("[[+\"say hello\" hello Peter    \"how are\" you?]]");
 		template.insert_generator("say hello", echo);
-		let mut shell = template.override();
+		let mut shell = template.wrap();
 		shell.unset_generator("say hello");
 
 		assert_eq!(shell.to_string(), "".into_string());
