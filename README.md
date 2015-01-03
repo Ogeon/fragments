@@ -48,7 +48,7 @@ fn main() {
 	let file = File::open(&Path::new("path/to/my/template.txt"));
 	let mut template = match Template::from_buffer(&mut BufferedReader::new(file)) {
 		Ok(template) => template,
-		Err(e) => fail!(e)
+		Err(e) => panic!(e)
 	};
 
 	//Insert something into the `name` placeholder
@@ -66,7 +66,7 @@ use fragments::Template;
 
 fn main() {
 	//Create a new Template from a string
-	let mut template: Template = from_str("Hello, [[:name]]!").unwrap();
+	let mut template: Template = "Hello, [[:name]]!".parse().unwrap();
 
 	//Insert something into the `name` placeholder
 	template.insert("name", "Peter");
@@ -87,7 +87,7 @@ fn main() {
 	//Create a new Template from a string
 	//We will have to escape the escapes when writing it as a string literal,
 	//but it's the same as '[...]\[[:this]] and escape them like \\\[[:this]][...]'
-	let mut template: Template = from_str("Hello, [[:name]]! Write placeholders like \\[[:this]] and escape them like \\\\\\[[:this]]").unwrap();
+	let mut template: Template = "Hello, [[:name]]! Write placeholders like \\[[:this]] and escape them like \\\\\\[[:this]]".parse().unwrap();
 
 	//Insert something into the `name` placeholder
 	template.insert("name", "Peter");
@@ -111,7 +111,7 @@ use fragments::Template;
 
 fn main() {
 	//Create a new Template from a string
-	let mut template: Template = from_str("Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]").unwrap();
+	let mut template: Template = "Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]".parse().unwrap();
 
 	//Insert something into the `name` placeholder
 	template.insert("name", "Peter");
@@ -150,13 +150,13 @@ fn join(parts: &Vec<String>, f: &mut fmt::Formatter) -> fmt::Result {
 
 fn main() {
 	//Create a new Template from a string
-	let mut template: Template = from_str("Hello, [[:name]]! Is it written as 'white space' or '[[+join white space]]'?").unwrap();
+	let mut template: Template = "Hello, [[:name]]! Is it written as 'white space' or '[[+join white space]]'?".parse().unwrap();
 
 	//Insert something into the `name` placeholder
 	template.insert("name", "Peter");
 
 	//Functions with the signature `fn(&Vec<String>) -> Box<Show>` will automatically implement the `Generator` trait
-	template.insert_generator("join", join);
+	template.insert_generator("join", join as fn(&Vec<String>, &mut fmt::Formatter) -> fmt::Result);
 
 	//Result: "Hello, Peter! Is it written as 'white space' or 'whitespace'?"
 	println!("Result: '{}'", template);
