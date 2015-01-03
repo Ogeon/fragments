@@ -300,7 +300,7 @@ impl Template {
 
 impl InnerTemplate<'static> for Template {
 	fn find_content<'a>(&'a self, label: &String) -> Option<&'a ContentType<'static>> {
-		self.content.find(label)
+		self.content.get(label)
 	}
 
 	fn get_condition(&self, label: &String) -> bool {
@@ -312,7 +312,7 @@ impl InnerTemplate<'static> for Template {
 	}
 
 	fn find_generator<'a>(&'a self, label: &String) -> Option<&'a Box<Generator + 'static>> {
-		self.generators.find(label)
+		self.generators.get(label)
 	}
 
 	fn get_tokens<'a>(&'a self) -> &'a Vec<Token> {
@@ -410,7 +410,7 @@ impl<'r, 'c> Shell<'r, 'c> {
 
 impl<'r, 'c: 'r> InnerTemplate<'r> for Shell<'r, 'c> {
 	fn find_content<'a>(&'a self, label: &String) -> Option<&'a ContentType<'r>> {
-		match self.content.find(label) {
+		match self.content.get(label) {
 			Some(&Some(ref v)) => Some(v),
 			Some(&None) => None,
 			None => self.base.find_content(label).map(|v| &*v)
@@ -418,11 +418,11 @@ impl<'r, 'c: 'r> InnerTemplate<'r> for Shell<'r, 'c> {
 	}
 
 	fn get_condition(&self, label: &String) -> bool {
-		self.conditions.find(label).map(|&v| v).unwrap_or_else(|| self.base.get_condition(label))
+		self.conditions.get(label).map(|&v| v).unwrap_or_else(|| self.base.get_condition(label))
 	}
 	
 	fn is_content_definded(&self, label: &String) -> bool {
-		match self.content.find(label) {
+		match self.content.get(label) {
 			Some(&Some(_)) => true,
 			Some(&None) => false,
 			None => self.base.is_content_definded(label)
@@ -430,7 +430,7 @@ impl<'r, 'c: 'r> InnerTemplate<'r> for Shell<'r, 'c> {
 	}
 
 	fn find_generator<'a>(&'a self, label: &String) -> Option<&'a Box<Generator + 'r>> {
-		match self.generators.find(label) {
+		match self.generators.get(label) {
 			Some(&Some(ref v)) => Some(v),
 			Some(&None) => None,
 			None => self.base.find_generator(label).map(|v| &*v)
