@@ -2,6 +2,7 @@ extern crate fragments;
 use fragments::Template;
 use std::fmt::Show;
 use std::fmt;
+use std::str::from_str;
 
 //This function will just concatenate the arguments.
 //I expect you to make cooler generators, yourself ;)
@@ -17,7 +18,7 @@ fn main() {
 	template.insert("name", "Peter");
 
 	//Functions with the signature `fn(&Vec<String>) -> Box<Show>` will automatically implement the `Generator` trait
-	template.insert_generator("join", join);
+	template.insert_generator("join", join as fn(&Vec<String>, &mut fmt::Formatter) -> fmt::Result);
 
 	//Result: "Hello, Peter! Is it written as 'white space' or 'whitespace'?"
 	println!("Result: '{}'", template);

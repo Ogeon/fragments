@@ -1,5 +1,6 @@
 extern crate fragments;
 use fragments::Template;
+use std::str::from_str;
 
 fn main() {
 	//Create a new Template from a string

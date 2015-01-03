@@ -9,7 +9,7 @@ fn main() {
 	let file = File::open(&Path::new("path/to/my/template.txt"));
 	let mut template = match Template::from_buffer(&mut BufferedReader::new(file)) {
 		Ok(template) => template,
-		Err(e) => fail!(e)
+		Err(e) => panic!(e)
 	};
 
 	//Insert something into the `name` placeholder
