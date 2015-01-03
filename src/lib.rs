@@ -40,14 +40,14 @@ pub enum ContentType {
 	Show(Box<fmt::Show>)
 }
 
-macro_rules! call_fmt(
-	($slf:ident, $f:ident: $($p:pat => $b:expr),+ and $($t:ident),+) => (
+macro_rules! call_fmt {
+	($slf:ident, $f:ident: $($p:pat => $b:expr),+ and $($t:ident),+) => {
 		match $slf {
 			$($p => $b,)+
 			$(&$t(ref v) => v.fmt($f)),+
 		}
-	)
-)
+	}
+}
 
 impl fmt::Show for ContentType {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -89,8 +89,8 @@ pub trait CopyTemplateContent {
 	fn to_template_content(&self) -> ContentType;
 }
 
-macro_rules! float_content(
-	($($t:ty),+) => (
+macro_rules! float_content {
+	($($t:ty),+) => {
 		$(impl TemplateContent for $t {
 			fn into_template_content(self) -> ContentType {
 				Float(self as f64, None)
@@ -102,11 +102,11 @@ macro_rules! float_content(
 				Float(*self as f64, None)
 			}
 		})+
-	)
-)
+	}
+}
 
-macro_rules! int_content(
-	($($t:ty),+) => (
+macro_rules! int_content {
+	($($t:ty),+) => {
 		$(impl TemplateContent for $t {
 			fn into_template_content(self) -> ContentType {
 				Int(self as i64)
@@ -118,11 +118,11 @@ macro_rules! int_content(
 				Int(*self as i64)
 			}
 		})+
-	)
-)
+	}
+}
 
-macro_rules! uint_content(
-	($($t:ty),+) => (
+macro_rules! uint_content {
+	($($t:ty),+) => {
 		$(impl TemplateContent for $t {
 			fn into_template_content(self) -> ContentType {
 				UnsignedInt(self as u64)
@@ -134,11 +134,11 @@ macro_rules! uint_content(
 				UnsignedInt(*self as u64)
 			}
 		})+
-	)
-)
+	}
+}
 
-macro_rules! deref_content(
-	($([$t:ty, $i:ident]),+) => (
+macro_rules! deref_content {
+	($([$t:ty, $i:ident]),+) => {
 		$(impl TemplateContent for $t {
 			fn into_template_content(self) -> ContentType {
 				$i(self)
@@ -150,13 +150,13 @@ macro_rules! deref_content(
 				$i(*self)
 			}
 		})+
-	)
-)
+	}
+}
 
-float_content!(f32, f64)
-int_content!(int, i8, i16, i32, i64)
-uint_content!(uint, u8, u16, u32, u64)
-deref_content!([char, Char], [bool, Bool], [&'static str, StaticStr])
+float_content!(f32, f64);
+int_content!(int, i8, i16, i32, i64);
+uint_content!(uint, u8, u16, u32, u64);
+deref_content!([char, Char], [bool, Bool], [&'static str, StaticStr]);
 
 
 impl TemplateContent for String {
