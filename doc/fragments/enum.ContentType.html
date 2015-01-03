@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `ContentType` enum in crate `fragments`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, ContentType">
+
+    <title>fragments::ContentType - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../main.css">
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <section class="sidebar">
+        
+        <p class='location'><a href='index.html'>fragments</a></p><div class='block struct'><h2>Structs</h2><a class='struct ' href='struct.Shell.html'>Shell</a><a class='struct ' href='struct.Template.html'>Template</a></div><div class='block enum'><h2>Enums</h2><a class='enum current' href='enum.ContentType.html'>ContentType</a><a class='enum ' href='enum.ExponentFormat.html'>ExponentFormat</a><a class='enum ' href='enum.SignificantDigits.html'>SignificantDigits</a><a class='enum ' href='enum.Token.html'>Token</a></div><div class='block trait'><h2>Traits</h2><a class='trait ' href='trait.CopyTemplateContent.html'>CopyTemplateContent</a><a class='trait ' href='trait.Generator.html'>Generator</a><a class='trait ' href='trait.InnerTemplate.html'>InnerTemplate</a><a class='trait ' href='trait.TemplateContent.html'>TemplateContent</a></div>
+    </section>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press 'S' to search, '?' for more options..."
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content enum">
+<h1 class='fqn'><span class='in-band'>Enum <a href='index.html'>fragments</a>::<wbr><a class='enum' href=''>ContentType</a><wbr></span><span class='out-of-band'><span id='render-detail'>
+            <a id="collapse-all" href="#">[-]
+            </a>&nbsp;<a id="expand-all" href="#">[+]</a>
+        </span><a id='src-2192' href='../src/fragments/lib.rs.html#34-45'>[src]</a></span></h1>
+<pre class='rust enum'>pub enum ContentType&lt;'a&gt; {
+    Float(<a href='http://doc.rust-lang.org/nightly/std/primitive.f64.html'>f64</a>),
+    FormattedFloat(<a href='http://doc.rust-lang.org/nightly/std/primitive.f64.html'>f64</a>, <a class='enum' href='../fragments/enum.SignificantDigits.html' title='fragments::SignificantDigits'>SignificantDigits</a>, <a class='enum' href='../fragments/enum.ExponentFormat.html' title='fragments::ExponentFormat'>ExponentFormat</a>),
+    Int(<a href='http://doc.rust-lang.org/nightly/std/primitive.i64.html'>i64</a>),
+    UnsignedInt(<a href='http://doc.rust-lang.org/nightly/std/primitive.u64.html'>u64</a>),
+    Char(<a href='http://doc.rust-lang.org/nightly/core/primitive.char.html'>char</a>),
+    Bool(<a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>),
+    Str(<a class='struct' href='http://doc.rust-lang.org/nightly/collections/string/struct.String.html' title='collections::string::String'>String</a>),
+    StaticStr(&amp;'static <a href='http://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>),
+    Template(<a class='struct' href='../fragments/struct.Template.html' title='fragments::Template'>Template</a>),
+    Show(<a class='struct' href='http://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='trait' href='http://doc.rust-lang.org/nightly/core/fmt/trait.Show.html' title='core::fmt::Show'>Show</a> + 'a&gt;),
+}</pre><div class='docblock'><p>Container enum for template content</p>
+</div><h2 class='variants'>Variants</h2>
+<table><tr><td id='variant.Float'><a class='stability Unmarked' title='No stability level'></a><code>Float</code></td><td></td></tr><tr><td id='variant.FormattedFloat'><a class='stability Unmarked' title='No stability level'></a><code>FormattedFloat</code></td><td></td></tr><tr><td id='variant.Int'><a class='stability Unmarked' title='No stability level'></a><code>Int</code></td><td></td></tr><tr><td id='variant.UnsignedInt'><a class='stability Unmarked' title='No stability level'></a><code>UnsignedInt</code></td><td></td></tr><tr><td id='variant.Char'><a class='stability Unmarked' title='No stability level'></a><code>Char</code></td><td></td></tr><tr><td id='variant.Bool'><a class='stability Unmarked' title='No stability level'></a><code>Bool</code></td><td></td></tr><tr><td id='variant.Str'><a class='stability Unmarked' title='No stability level'></a><code>Str</code></td><td></td></tr><tr><td id='variant.StaticStr'><a class='stability Unmarked' title='No stability level'></a><code>StaticStr</code></td><td></td></tr><tr><td id='variant.Template'><a class='stability Unmarked' title='No stability level'></a><code>Template</code></td><td></td></tr><tr><td id='variant.Show'><a class='stability Unmarked' title='No stability level'></a><code>Show</code></td><td></td></tr></table><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><a class='stability Unstable' title='Unstable: I/O and core have yet to be reconciled'></a><code>impl&lt;'a&gt; <a class='trait' href='http://doc.rust-lang.org/nightly/core/fmt/trait.Show.html' title='core::fmt::Show'>Show</a> for <a class='enum' href='../fragments/enum.ContentType.html' title='fragments::ContentType'>ContentType</a>&lt;'a&gt;</code></h3><div class='impl-items'><h4 id='method.fmt' class='method'><a class='stability Unstable' title='Unstable: I/O and core have yet to be reconciled'></a><code>fn <a href='#method.fmt' class='fnname'>fmt</a>(&amp;self, f: &amp;mut <a class='struct' href='http://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html' title='core::fmt::Formatter'>Formatter</a>) -&gt; <a class='type' href='http://doc.rust-lang.org/nightly/core/fmt/type.Result.html' title='core::fmt::Result'>Result</a></code></h4>
+</div><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;'a&gt; <a class='trait' href='../fragments/trait.TemplateContent.html' title='fragments::TemplateContent'>TemplateContent</a>&lt;'a&gt; for <a class='enum' href='../fragments/enum.ContentType.html' title='fragments::ContentType'>ContentType</a>&lt;'a&gt;</code></h3><div class='impl-items'><h4 id='method.into_template_content' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.into_template_content' class='fnname'>into_template_content</a>(self) -&gt; <a class='enum' href='../fragments/enum.ContentType.html' title='fragments::ContentType'>ContentType</a>&lt;'a&gt;</code></h4>
+</div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <div id="help" class="hidden">
+        <div class="shortcuts">
+            <h1>Keyboard shortcuts</h1>
+            <dl>
+                <dt>?</dt>
+                <dd>Show this help dialog</dd>
+                <dt>S</dt>
+                <dd>Focus the search field</dd>
+                <dt>&larrb;</dt>
+                <dd>Move up in search results</dd>
+                <dt>&rarrb;</dt>
+                <dd>Move down in search results</dd>
+                <dt>&#9166;</dt>
+                <dd>Go to active search result</dd>
+            </dl>
+        </div>
+        <div class="infos">
+            <h1>Search tricks</h1>
+            <p>
+                Prefix searches with a type followed by a colon (e.g.
+                <code>fn:</code>) to restrict the search to a given type.
+            </p>
+            <p>
+                Accepted types are: <code>fn</code>, <code>mod</code>,
+                <code>struct</code>, <code>enum</code>,
+                <code>trait</code>, <code>typedef</code> (or
+                <code>tdef</code>).
+            </p>
+        </div>
+    </div>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "fragments";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../jquery.js"></script>
+    <script src="../main.js"></script>
+    
+    <script async src="../search-index.js"></script>
+</body>
+</html>
