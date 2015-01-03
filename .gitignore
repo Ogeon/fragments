@@ -2,3 +2,4 @@ lib
 doc
 fragments-test
 target
+Cargo.lock
