@@ -28,7 +28,7 @@ pub use std::num::strconv::{
 mod parser;
 
 ///Internal representation of template parts.
-#[deriving(PartialEq, Show)]
+#[derive(PartialEq, Show)]
 pub enum Token {
 	String(String),
 	Placeholder(String),

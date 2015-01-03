@@ -3,7 +3,7 @@ use super::Token;
 use std::iter::{Iterator, Peekable};
 use std::fmt;
 
-#[deriving(PartialEq)]
+#[derive(PartialEq)]
 enum LexToken {
 	Begin,
 	End,
