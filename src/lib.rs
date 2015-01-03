@@ -520,8 +520,8 @@ mod test {
 	use std::fmt::{Show, Formatter};
 	use std::fmt;
 
-	macro_rules! test_insert(
-		($($v:expr),+) => (
+	macro_rules! test_insert {
+		($($v:expr),+) => {
 			#[test]
 			fn test_insert() {
 				let mut template: Template = monitored_from_str("[[:v]]");
@@ -530,8 +530,8 @@ mod test {
 					assert_eq!(template.to_string(), $v.to_string());
 				)+
 			}
-		)
-	)
+		}
+	}
 
 	static peter: &'static str = "Peter";
 	static nice: &'static str = "nice";
@@ -638,7 +638,7 @@ mod test {
 		assert_eq!(template.to_string(), "1.2, 1.2000, 1.2".into_string())
 	}
 
-	test_insert!(1u8, 1u16, 1u32, 1u64, 1i8, 1i16, 1i32, 1i64, 'A', true, false)
+	test_insert!(1u8, 1u16, 1u32, 1u64, 1i8, 1i16, 1i32, 1i64, 'A', true, false);
 
 	#[test]
 	fn override_identical() {
