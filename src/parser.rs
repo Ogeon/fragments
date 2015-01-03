@@ -144,7 +144,7 @@ fn lex<T: Iterator<Result<char, String>>>(chars: &mut T) -> Result<Vec<LexToken>
 					Some(Ok(c)) => {
 						tokens.push(LexToken::Character(c));
 					},
-					Some(Err(e)) => return Err(e.into_string()),
+					Some(Err(e)) => return Err(e),
 					None => break
 				},
 				c => tokens.push(LexToken::Character(c))
