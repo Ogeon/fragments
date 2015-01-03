@@ -528,7 +528,6 @@ mod test {
 	use super::{Template, Token, SignificantDigits, ExponentFormat};
 	use std::fmt::{Show, Formatter};
 	use std::fmt;
-	use std::str::from_str;
 
 	macro_rules! test_insert {
 		($($v:expr),+) => {
@@ -563,7 +562,7 @@ mod test {
 
 	#[test]
 	fn basic_tokens() {
-		let template: Template = from_str("Hello, [[:name]]! This is a [[:something]] template.").unwrap();
+		let template: Template = "Hello, [[:name]]! This is a [[:something]] template.".parse().unwrap();
 		assert_eq!(template.tokens[0], Token::String("Hello, ".to_string()));
 		assert_eq!(template.tokens[1], Token::Placeholder("name".to_string()));
 		assert_eq!(template.tokens[2], Token::String("! This is a ".to_string()));
@@ -574,7 +573,7 @@ mod test {
 	#[test]
 	#[should_fail]
 	fn strange_tokens() {
-		let _: Template = from_str("Hello, [[[:name]]]! This is a [[[[:something]] template.").unwrap();
+		let _: Template = "Hello, [[[:name]]]! This is a [[[[:something]] template.".parse().unwrap();
 	}
 
 	#[test]

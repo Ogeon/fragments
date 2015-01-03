@@ -2,7 +2,6 @@ extern crate fragments;
 use fragments::Template;
 use std::fmt::Show;
 use std::fmt;
-use std::str::from_str;
 
 //This function will just concatenate the arguments.
 //I expect you to make cooler generators, yourself ;)
@@ -12,7 +11,7 @@ fn join(parts: &Vec<String>, f: &mut fmt::Formatter) -> fmt::Result {
 
 fn main() {
 	//Create a new Template from a string
-	let mut template: Template = from_str("Hello, [[:name]]! Is it written as 'white space' or '[[+join white space]]'?").unwrap();
+	let mut template: Template = "Hello, [[:name]]! Is it written as 'white space' or '[[+join white space]]'?".parse().unwrap();
 
 	//Insert something into the `name` placeholder
 	template.insert("name", "Peter");

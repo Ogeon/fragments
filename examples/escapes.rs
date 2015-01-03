@@ -1,12 +1,11 @@
 extern crate fragments;
 use fragments::Template;
-use std::str::from_str;
 
 fn main() {
 	//Create a new Template from a string
 	//We will have to escape the escapes when writing it as a string literal,
 	//but it's the same as '[...]\[[:this]] and escape them like \\\[[:this]][...]'
-	let mut template: Template = from_str("Hello, [[:name]]! Write placeholders like \\[[:this]] and escape them like \\\\\\[[:this]]").unwrap();
+	let mut template: Template = "Hello, [[:name]]! Write placeholders like \\[[:this]] and escape them like \\\\\\[[:this]]".parse().unwrap();
 
 	//Insert something into the `name` placeholder
 	template.insert("name", "Peter");

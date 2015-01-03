@@ -1,10 +1,9 @@
 extern crate fragments;
 use fragments::Template;
-use std::str::from_str;
 
 fn main() {
 	//Create a new Template from a string
-	let mut template: Template = from_str("Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]").unwrap();
+	let mut template: Template = "Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]".parse().unwrap();
 
 	//Insert something into the `name` placeholder
 	template.insert("name", "Peter");
