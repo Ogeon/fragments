@@ -535,8 +535,8 @@ mod test {
 		}
 	}
 
-	static peter: &'static str = "Peter";
-	static nice: &'static str = "nice";
+	static PETER: &'static str = "Peter";
+	static NICE: &'static str = "nice";
 
 	fn monitored_from_str(s: &str) -> Template {
 		match Template::from_chars(&mut s.chars()) {
@@ -580,8 +580,8 @@ mod test {
 	#[test]
 	fn replacement() {
 		let mut template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
-		template.insert("name", peter);
-		template.insert("something", nice);
+		template.insert("name", PETER);
+		template.insert("something", NICE);
 		assert_eq!(template.to_string(), "Hello, Peter! This is a nice template.".to_string());
 	}
 
@@ -589,8 +589,8 @@ mod test {
 	fn templates_in_templates() {
 		let mut template1 = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
 		let mut template2 = monitored_from_str("really [[:something]]");
-		template1.insert("name", peter);
-		template2.insert("something", nice);
+		template1.insert("name", PETER);
+		template2.insert("something", NICE);
 
 		template1.insert("something", template2);
 
@@ -600,7 +600,7 @@ mod test {
 	#[test]
 	fn conditional() {
 		let mut template = monitored_from_str("Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]");
-		template.insert("name", peter);
+		template.insert("name", PETER);
 		assert_eq!(template.to_string(), "Hello, Peter!".to_string());
 		template.set("condition", true);
 		assert_eq!(template.to_string(), "Hello, Peter! The condition is true.".to_string());
@@ -609,7 +609,7 @@ mod test {
 	#[test]
 	fn conditional_switch() {
 		let mut template = monitored_from_str("Hello, [[:name]]! The condition is [[?condition]]true[[/condition]][[?!condition]]false[[/condition]].");
-		template.insert("name", peter);
+		template.insert("name", PETER);
 		assert_eq!(template.to_string(), "Hello, Peter! The condition is false.".to_string());
 		template.set("condition", true);
 		assert_eq!(template.to_string(), "Hello, Peter! The condition is true.".to_string());
@@ -619,7 +619,7 @@ mod test {
 	fn content_conditional() {
 		let mut template = monitored_from_str("Hello[[?:name]], [[:name]][[/name]]![[?!:name]] I don't know you.[[/!name]]");
 		assert_eq!(template.to_string(), "Hello! I don't know you.".to_string());
-		template.insert("name", peter);
+		template.insert("name", PETER);
 		assert_eq!(template.to_string(), "Hello, Peter!".to_string());
 	}
 
@@ -645,8 +645,8 @@ mod test {
 	#[test]
 	fn wrap_identical() {
 		let mut template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
-		template.insert("name", peter);
-		template.insert("something", nice);
+		template.insert("name", PETER);
+		template.insert("something", NICE);
 		let shell = template.wrap();
 		assert_eq!(template.to_string(), shell.to_string());
 	}
@@ -654,8 +654,8 @@ mod test {
 	#[test]
 	fn wrap_set() {
 		let mut template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
-		template.insert("name", peter);
-		template.insert("something", nice);
+		template.insert("name", PETER);
+		template.insert("something", NICE);
 		let mut shell = template.wrap();
 		shell.insert("name", "Olivia");
 		assert_eq!(shell.to_string(), "Hello, Olivia! This is a nice template.".to_string());
@@ -664,8 +664,8 @@ mod test {
 	#[test]
 	fn wrap_unset() {
 		let mut template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
-		template.insert("name", peter);
-		template.insert("something", nice);
+		template.insert("name", PETER);
+		template.insert("something", NICE);
 		let mut shell = template.wrap();
 		shell.unset("name");
 		assert_eq!(shell.to_string(), "Hello, ! This is a nice template.".to_string());
@@ -674,7 +674,7 @@ mod test {
 	#[test]
 	fn wrap_condition() {
 		let mut template = monitored_from_str("Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]");
-		template.insert("name", peter);
+		template.insert("name", PETER);
 		template.set("condition", true);
 		let mut shell = template.wrap();
 		shell.set("condition", false);
@@ -685,14 +685,14 @@ mod test {
 	fn wrap_set_content_condition() {
 		let template = monitored_from_str("Hello[[?:name]], [[:name]][[/name]]![[?!:name]] I don't know you.[[/!name]]");
 		let mut shell = template.wrap();
-		shell.insert("name", peter);
+		shell.insert("name", PETER);
 		assert_eq!(shell.to_string(), "Hello, Peter!".to_string());
 	}
 
 	#[test]
 	fn wrap_unset_content_condition() {
 		let mut template = monitored_from_str("Hello[[?:name]], [[:name]][[/name]]![[?!:name]] I don't know you.[[/!name]]");
-		template.insert("name", peter);
+		template.insert("name", PETER);
 		let mut shell = template.wrap();
 		shell.unset("name");
 		assert_eq!(shell.to_string(), "Hello! I don't know you.".to_string());
