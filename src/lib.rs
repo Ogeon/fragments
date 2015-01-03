@@ -16,7 +16,7 @@ use std::vec::Vec;
 use std::collections::{HashMap, HashSet};
 use std::borrow::ToOwned;
 use std::num::strconv::{
-	float_to_str_bytes_common,
+	float_to_str_common,
 	SignFormat
 };
 
@@ -66,7 +66,7 @@ impl<'a> fmt::Show for ContentType<'a> {
 			self,
 			f:
 			&ContentType::FormattedFloat(v, sig, exp) => {
-				let (string, _special) = float_to_str_bytes_common(v, 10, false, SignFormat::SignNeg, sig, exp, false);
+				let (string, _special) = float_to_str_common(v, 10, false, SignFormat::SignNeg, sig, exp, false);
 				string.fmt(f)
 			}
 			
