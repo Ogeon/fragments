@@ -11,9 +11,19 @@
 
 use std::fmt;
 use std::fmt::Show;
-use std::from_str::FromStr;
+use std::str::FromStr;
 use std::vec::Vec;
-use std::collections::hashmap::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
+use std::borrow::ToOwned;
+use std::num::strconv::{
+	float_to_str_bytes_common,
+	SignFormat
+};
+
+pub use std::num::strconv::{
+	SignificantDigits,
+	ExponentFormat
+};
 
 mod parser;
 
@@ -28,8 +38,9 @@ pub enum Token {
 }
 
 ///Container enum for template content
-pub enum ContentType {
-	Float(f64, Option<uint>), ///A float with an optional precision
+pub enum ContentType<'a> {
+	Float(f64),
+	FormattedFloat(f64, SignificantDigits, ExponentFormat),
 	Int(i64),
 	UnsignedInt(u64),
 	Char(char),
@@ -37,35 +48,33 @@ pub enum ContentType {
 	Str(String),
 	StaticStr(&'static str),
 	Template(Template),
-	Show(Box<fmt::Show>)
+	Show(Box<fmt::Show + 'a>)
 }
 
 macro_rules! call_fmt {
 	($slf:ident, $f:ident: $($p:pat => $b:expr),+ and $($t:ident),+) => {
 		match $slf {
 			$($p => $b,)+
-			$(&$t(ref v) => v.fmt($f)),+
+			$(&ContentType::$t(ref v) => v.fmt($f)),+
 		}
 	}
 }
 
-impl fmt::Show for ContentType {
+impl<'a> fmt::Show for ContentType<'a> {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		call_fmt! {
 			self,
 			f:
-			&Float(v, p) => {
-				let prev_p = f.precision;
-				f.precision = p;
-				let result = (&v as &fmt::Float).fmt(f);
-				f.precision = prev_p;
-				result
+			&ContentType::FormattedFloat(v, sig, exp) => {
+				let (string, _special) = float_to_str_bytes_common(v, 10, false, SignFormat::SignNeg, sig, exp, false);
+				string.fmt(f)
 			}
 			
 			and
 
 			Int,
 			UnsignedInt,
+			Float,
 			Char,
 			Bool,
 			Str,
@@ -78,28 +87,28 @@ impl fmt::Show for ContentType {
 
 
 ///A trait for types that can be inserted into templates
-pub trait TemplateContent {
+pub trait TemplateContent<'a> {
 	///Convert `self` to a suitable `ContentType` variant, not making a copy if possible.
-	fn into_template_content(self) -> ContentType;
+	fn into_template_content(self) -> ContentType<'a>;
 }
 
 ///A trait for types that can be copied and inserted into templates
-pub trait CopyTemplateContent {
+pub trait CopyTemplateContent<'a> {
 	///Copy and convert `self` to a suitable `ContentType` variant.
 	fn to_template_content(&self) -> ContentType;
 }
 
 macro_rules! float_content {
 	($($t:ty),+) => {
-		$(impl TemplateContent for $t {
-			fn into_template_content(self) -> ContentType {
-				Float(self as f64, None)
+		$(impl TemplateContent<'static> for $t {
+			fn into_template_content(self) -> ContentType<'static> {
+				ContentType::Float(self as f64)
 			}
 		}
 
-		impl CopyTemplateContent for $t {
-			fn to_template_content(&self) -> ContentType {
-				Float(*self as f64, None)
+		impl CopyTemplateContent<'static> for $t {
+			fn to_template_content(&self) -> ContentType<'static> {
+				ContentType::Float(*self as f64)
 			}
 		})+
 	}
@@ -107,15 +116,15 @@ macro_rules! float_content {
 
 macro_rules! int_content {
 	($($t:ty),+) => {
-		$(impl TemplateContent for $t {
-			fn into_template_content(self) -> ContentType {
-				Int(self as i64)
+		$(impl TemplateContent<'static> for $t {
+			fn into_template_content(self) -> ContentType<'static> {
+				ContentType::Int(self as i64)
 			}
 		}
 
-		impl CopyTemplateContent for $t {
-			fn to_template_content(&self) -> ContentType {
-				Int(*self as i64)
+		impl CopyTemplateContent<'static> for $t {
+			fn to_template_content(&self) -> ContentType<'static> {
+				ContentType::Int(*self as i64)
 			}
 		})+
 	}
@@ -123,15 +132,15 @@ macro_rules! int_content {
 
 macro_rules! uint_content {
 	($($t:ty),+) => {
-		$(impl TemplateContent for $t {
-			fn into_template_content(self) -> ContentType {
-				UnsignedInt(self as u64)
+		$(impl TemplateContent<'static> for $t {
+			fn into_template_content(self) -> ContentType<'static> {
+				ContentType::UnsignedInt(self as u64)
 			}
 		}
 
-		impl CopyTemplateContent for $t {
-			fn to_template_content(&self) -> ContentType {
-				UnsignedInt(*self as u64)
+		impl CopyTemplateContent<'static> for $t {
+			fn to_template_content(&self) -> ContentType<'static> {
+				ContentType::UnsignedInt(*self as u64)
 			}
 		})+
 	}
@@ -139,15 +148,15 @@ macro_rules! uint_content {
 
 macro_rules! deref_content {
 	($([$t:ty, $i:ident]),+) => {
-		$(impl TemplateContent for $t {
-			fn into_template_content(self) -> ContentType {
-				$i(self)
+		$(impl TemplateContent<'static> for $t {
+			fn into_template_content(self) -> ContentType<'static> {
+				ContentType::$i(self)
 			}
 		}
 
-		impl CopyTemplateContent for $t {
-			fn to_template_content(&self) -> ContentType {
-				$i(*self)
+		impl CopyTemplateContent<'static> for $t {
+			fn to_template_content(&self) -> ContentType<'static> {
+				ContentType::$i(*self)
 			}
 		})+
 	}
@@ -159,35 +168,35 @@ uint_content!(uint, u8, u16, u32, u64);
 deref_content!([char, Char], [bool, Bool], [&'static str, StaticStr]);
 
 
-impl TemplateContent for String {
-	fn into_template_content(self) -> ContentType {
-		Str(self)
+impl TemplateContent<'static> for String {
+	fn into_template_content(self) -> ContentType<'static> {
+		ContentType::Str(self)
 	}
 }
 
-impl CopyTemplateContent for String {
-	fn to_template_content(&self) -> ContentType {
-		Str(self.clone())
-	}
-}
-
-
-impl TemplateContent for Template {
-	fn into_template_content(self) -> ContentType {
-		Template(self)
+impl CopyTemplateContent<'static> for String {
+	fn to_template_content(&self) -> ContentType<'static> {
+		ContentType::Str(self.clone())
 	}
 }
 
 
-impl TemplateContent for Box<Show> {
-	fn into_template_content(self) -> ContentType {
-		Show(self)
+impl TemplateContent<'static> for Template {
+	fn into_template_content(self) -> ContentType<'static> {
+		ContentType::Template(self)
 	}
 }
 
 
-impl TemplateContent for ContentType {
-	fn into_template_content(self) -> ContentType {
+impl<'a> TemplateContent<'a> for Box<Show + 'a> {
+	fn into_template_content(self) -> ContentType<'a> {
+		ContentType::Show(self)
+	}
+}
+
+
+impl<'a> TemplateContent<'a> for ContentType<'a> {
+	fn into_template_content(self) -> ContentType<'a> {
 		self
 	}
 }
@@ -216,9 +225,9 @@ impl TemplateContent for ContentType {
 ///rest of the content.
 pub struct Template {
 	///Content for the placeholders
-	pub content: HashMap<String, ContentType>,
+	pub content: HashMap<String, ContentType<'static>>,
 	///Content generators
-	pub generators: HashMap<String, Box<Generator>>,
+	pub generators: HashMap<String, Box<Generator + 'static>>,
 	///Conditional switches
 	pub conditions: HashSet<String>,
 	tokens: Vec<Token>
@@ -256,41 +265,41 @@ impl Template {
 
 	///Insert content.
 	#[inline]
-	pub fn insert<S: StrAllocating, T: TemplateContent>(&mut self, label: S, item: T) {
-		self.content.insert(label.into_string(), item.into_template_content());
+	pub fn insert<S: ToOwned<String> + ?Sized, T: TemplateContent<'static>>(&mut self, label: &S, item: T) {
+		self.content.insert(label.to_owned(), item.into_template_content());
 	}
 
 	///Insert a formatted float.
 	#[inline]
-	pub fn insert_float<S: StrAllocating>(&mut self, label: S, item: f64, precision: uint) {
-		self.content.insert(label.into_string(), Float(item, Some(precision)));
+	pub fn insert_formatted_float<S: ToOwned<String> + ?Sized>(&mut self, label: &S, item: f64, precision: SignificantDigits, exponent: ExponentFormat) {
+		self.content.insert(label.to_owned(), ContentType::FormattedFloat(item, precision, exponent));
 	}
 
 	///Insert a content generator.
 	#[inline]
-	pub fn insert_generator<S: StrAllocating, T: Generator + Send>(&mut self, label: S, gen: T) {
-		self.generators.insert(label.into_string(), box gen as Box<Generator>);
+	pub fn insert_generator<S: ToOwned<String> + ?Sized, T: Generator + Send>(&mut self, label: &S, gen: T) {
+		self.generators.insert(label.to_owned(), box gen as Box<Generator>);
 	}
 
 	///Set a condition.
 	#[inline]
-	pub fn set<S: StrAllocating>(&mut self, label: S, value: bool) {
+	pub fn set<S: ToOwned<String> + ?Sized + Eq + std::hash::Hash>(&mut self, label: &S, value: bool) {
 		if value {
-			self.conditions.insert(label.into_string());
+			self.conditions.insert(label.to_owned());
 		} else {
-			self.conditions.remove(&label.into_string());
+			self.conditions.remove(label);
 		}
 	}
 
 	///Create a `Shell` around this `Template`.
 	#[inline]
-	pub fn wrap<'a>(&'a self) -> Shell<'a> {
-		Shell::new(self as &'a Overridable)
+	pub fn wrap<'a, 'c>(&'a self) -> Shell<'a, 'c> {
+		Shell::new(self)
 	}
 }
 
-impl Overridable for Template {
-	fn find_content<'a>(&'a self, label: &String) -> Option<&'a ContentType> {
+impl InnerTemplate<'static> for Template {
+	fn find_content<'a>(&'a self, label: &String) -> Option<&'a ContentType<'static>> {
 		self.content.find(label)
 	}
 
@@ -302,7 +311,7 @@ impl Overridable for Template {
 		self.content.contains_key(label)
 	}
 
-	fn find_generator<'a>(&'a self, label: &String) -> Option<&'a Box<Generator>> {
+	fn find_generator<'a>(&'a self, label: &String) -> Option<&'a Box<Generator + 'static>> {
 		self.generators.find(label)
 	}
 
@@ -323,7 +332,7 @@ impl FromStr for Template {
 
 impl fmt::Show for Template {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		format_tokens(self as &Overridable, &self.tokens, f)
+		format_tokens(self as &InnerTemplate, &self.tokens, f)
 	}
 }
 
@@ -335,76 +344,76 @@ impl fmt::Show for Template {
 ///
 ///Shells can be used to assign different values to a template and still
 ///keep the original intact.
-pub struct Shell<'a> {
+pub struct Shell<'r, 'c: 'r> {
     ///Content for the placeholders
-	pub content: HashMap<String, Option<ContentType>>,
+	pub content: HashMap<String, Option<ContentType<'r>>>,
 	///Content generators
-	pub generators: HashMap<String, Option<Box<Generator>>>,
+	pub generators: HashMap<String, Option<Box<Generator + 'r>>>,
 	///Conditional switches
 	pub conditions: HashMap<String, bool>,
-    base: &'a Overridable
+    base: &'r (InnerTemplate<'c> + 'r)
 }
 
-impl<'a> Shell<'a> {
+impl<'r, 'c> Shell<'r, 'c> {
 	///Create a new `Shell` around `base`.
-	pub fn new<'a>(base: &'a Overridable) -> Shell<'a> {
+	pub fn new<'a, 'b, T: InnerTemplate<'b>>(base: &'a T) -> Shell<'a, 'b> {
 		Shell {
 			content: HashMap::new(),
 			generators: HashMap::new(),
 			conditions: HashMap::new(),
-			base: base
+			base: base as &InnerTemplate<'b>
 		}
 	}
 
 	///Insert content.
 	#[inline]
-	pub fn insert<S: StrAllocating, T: TemplateContent>(&mut self, label: S, item: T) {
-		self.content.insert(label.into_string(), Some(item.into_template_content()));
+	pub fn insert<S: ToOwned<String> + ?Sized, T: TemplateContent<'c>>(&mut self, label: &S, item: T) {
+		self.content.insert(label.to_owned(), Some(item.into_template_content()));
 	}
 
 	///Unset content.
 	#[inline]
-	pub fn unset<S: StrAllocating>(&mut self, label: S) {
-		self.content.insert(label.into_string(), None);
+	pub fn unset<S: ToOwned<String> + ?Sized>(&mut self, label: &S) {
+		self.content.insert(label.to_owned(), None);
 	}
 
 	///Insert a formatted float.
 	#[inline]
-	pub fn insert_float<S: StrAllocating>(&mut self, label: S, item: f64, precision: uint) {
-		self.content.insert(label.into_string(), Some(Float(item, Some(precision))));
+	pub fn insert_formatted_float<S: ToOwned<String> + ?Sized>(&mut self, label: &S, item: f64, precision: SignificantDigits, exponent: ExponentFormat) {
+		self.content.insert(label.to_owned(), Some(ContentType::FormattedFloat(item, precision, exponent)));
 	}
 
 	///Insert a content generator.
 	#[inline]
-	pub fn insert_generator<S: StrAllocating, T: Generator + Send>(&mut self, label: S, gen: T) {
-		self.generators.insert(label.into_string(), Some(box gen as Box<Generator>));
+	pub fn insert_generator<S: ToOwned<String> + ?Sized, T: Generator + Send>(&mut self, label: &S, gen: T) {
+		self.generators.insert(label.to_owned(), Some(box gen as Box<Generator>));
 	}
 
 	///Unset a content generator.
 	#[inline]
-	pub fn unset_generator<S: StrAllocating>(&mut self, label: S) {
-		self.generators.insert(label.into_string(), None);
+	pub fn unset_generator<S: ToOwned<String> + ?Sized>(&mut self, label: &S) {
+		self.generators.insert(label.to_owned(), None);
 	}
 
 	///Set a condition.
 	#[inline]
-	pub fn set<S: StrAllocating>(&mut self, label: S, value: bool) {
-		self.conditions.insert(label.into_string(), value);
+	pub fn set<S: ToOwned<String> + ?Sized>(&mut self, label: &S, value: bool) {
+		self.conditions.insert(label.to_owned(), value);
 	}
 
 	///Create an other `Shell` around this `Shell`.
 	#[inline]
-	pub fn wrap<'a>(&'a self) -> Shell<'a> {
-		Shell::new(self as &'a Overridable)
+	pub fn wrap<'a: 'c>(&'a self) -> Shell<'a, 'c> {
+		Shell::new(self)
 	}
 }
 
-impl<'a> Overridable for Shell<'a> {
-	fn find_content<'a>(&'a self, label: &String) -> Option<&'a ContentType> {
+impl<'r, 'c: 'r> InnerTemplate<'r> for Shell<'r, 'c> {
+	fn find_content<'a>(&'a self, label: &String) -> Option<&'a ContentType<'r>> {
 		match self.content.find(label) {
 			Some(&Some(ref v)) => Some(v),
 			Some(&None) => None,
-			None => self.base.find_content(label)
+			None => self.base.find_content(label).map(|v| &*v)
 		}
 	}
 
@@ -420,11 +429,11 @@ impl<'a> Overridable for Shell<'a> {
 		}
 	}
 
-	fn find_generator<'a>(&'a self, label: &String) -> Option<&'a Box<Generator>> {
+	fn find_generator<'a>(&'a self, label: &String) -> Option<&'a Box<Generator + 'r>> {
 		match self.generators.find(label) {
 			Some(&Some(ref v)) => Some(v),
 			Some(&None) => None,
-			None => self.base.find_generator(label)
+			None => self.base.find_generator(label).map(|v| &*v)
 		}
 	}
 
@@ -433,9 +442,9 @@ impl<'a> Overridable for Shell<'a> {
 	}
 }
 
-impl<'a> fmt::Show for Shell<'a> {
+impl<'r, 'c> fmt::Show for Shell<'r, 'c> {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		format_tokens(self as &Overridable, self.get_tokens(), f)
+		format_tokens(self as &InnerTemplate, self.get_tokens(), f)
 	}
 }
 
@@ -443,11 +452,11 @@ impl<'a> fmt::Show for Shell<'a> {
 
 
 ///A trait for overridable templates.
-trait Overridable {
-	fn find_content<'a>(&'a self, label: &String) -> Option<&'a ContentType>;
+pub trait InnerTemplate<'c> {
+	fn find_content<'a>(&'a self, label: &String) -> Option<&'a ContentType<'c>>;
 	fn get_condition(&self, label: &String) -> bool;
 	fn is_content_definded(&self, label: &String) -> bool;
-	fn find_generator<'a>(&'a self, label: &String) -> Option<&'a Box<Generator>>;
+	fn find_generator<'a>(&'a self, label: &String) -> Option<&'a Box<Generator + 'c>>;
 	fn get_tokens<'a>(&'a self) -> &'a Vec<Token>;
 }
 
@@ -466,19 +475,19 @@ impl Generator for fn(args: &Vec<String>, &mut fmt::Formatter) -> fmt::Result {
 
 
 
-fn format_tokens(template: &Overridable, tokens: &Vec<Token>, f: &mut fmt::Formatter) -> fmt::Result {
+fn format_tokens(template: &InnerTemplate, tokens: &Vec<Token>, f: &mut fmt::Formatter) -> fmt::Result {
 	for token in tokens.iter() {
 		let res = match token {
-			&String(ref s) => f.write(s.as_bytes()),
+			&Token::String(ref s) => f.write_str(s.as_slice()),
 
-			&Placeholder(ref k) => {
+			&Token::Placeholder(ref k) => {
 				match template.find_content(k) {
 					Some(value) => value.fmt(f),
 					None => Ok(())
 				}
 			},
 
-			&Conditional(ref k, expected, ref tokens) => {
+			&Token::Conditional(ref k, expected, ref tokens) => {
 				if template.get_condition(k) == expected {
 					format_tokens(template, tokens, f)
 				} else {
@@ -486,7 +495,7 @@ fn format_tokens(template: &Overridable, tokens: &Vec<Token>, f: &mut fmt::Forma
 				}
 			},
 
-			&ContentConditional(ref k, expected, ref tokens) => {
+			&Token::ContentConditional(ref k, expected, ref tokens) => {
 				if template.is_content_definded(k) == expected {
 					format_tokens(template, tokens, f)
 				} else {
@@ -494,7 +503,7 @@ fn format_tokens(template: &Overridable, tokens: &Vec<Token>, f: &mut fmt::Forma
 				}
 			},
 
-			&Generated(ref k, ref vars) => {
+			&Token::Generated(ref k, ref vars) => {
 				match template.find_generator(k) {
 					Some(gen) => gen.generate(vars, f),
 					None => Ok(())
@@ -516,9 +525,10 @@ fn format_tokens(template: &Overridable, tokens: &Vec<Token>, f: &mut fmt::Forma
 
 #[cfg(test)]
 mod test {
-	use super::{Template, Placeholder, String};
+	use super::{Template, Token, SignificantDigits, ExponentFormat};
 	use std::fmt::{Show, Formatter};
 	use std::fmt;
+	use std::str::from_str;
 
 	macro_rules! test_insert {
 		($($v:expr),+) => {
@@ -539,7 +549,7 @@ mod test {
 	fn monitored_from_str(s: &str) -> Template {
 		match Template::from_chars(&mut s.chars()) {
 			Ok(template) => template,
-			Err(e) => fail!(e)
+			Err(e) => panic!(e)
 		}
 	}
 
@@ -554,11 +564,11 @@ mod test {
 	#[test]
 	fn basic_tokens() {
 		let template: Template = from_str("Hello, [[:name]]! This is a [[:something]] template.").unwrap();
-		assert_eq!(template.tokens[0], String("Hello, ".into_string()));
-		assert_eq!(template.tokens[1], Placeholder("name".into_string()));
-		assert_eq!(template.tokens[2], String("! This is a ".into_string()));
-		assert_eq!(template.tokens[3], Placeholder("something".into_string()));
-		assert_eq!(template.tokens[4], String(" template.".into_string()));
+		assert_eq!(template.tokens[0], Token::String("Hello, ".into_string()));
+		assert_eq!(template.tokens[1], Token::Placeholder("name".into_string()));
+		assert_eq!(template.tokens[2], Token::String("! This is a ".into_string()));
+		assert_eq!(template.tokens[3], Token::Placeholder("something".into_string()));
+		assert_eq!(template.tokens[4], Token::String(" template.".into_string()));
 	}
 
 	#[test]
@@ -570,9 +580,9 @@ mod test {
 	#[test]
 	fn escaped_tokens() {
 		let template = monitored_from_str("Hello, [[:name]]! Write placeholders like \\[[:this]] and escape them like \\\\\\[[:this]]");
-		assert_eq!(template.tokens[0], String("Hello, ".into_string()));
-		assert_eq!(template.tokens[1], Placeholder("name".into_string()));
-		assert_eq!(template.tokens[2], String("! Write placeholders like [[:this]] and escape them like \\[[:this]]".into_string()));
+		assert_eq!(template.tokens[0], Token::String("Hello, ".into_string()));
+		assert_eq!(template.tokens[1], Token::Placeholder("name".into_string()));
+		assert_eq!(template.tokens[2], Token::String("! Write placeholders like [[:this]] and escape them like \\[[:this]]".into_string()));
 	}
 
 	#[test]
@@ -624,7 +634,7 @@ mod test {
 	#[test]
 	fn generator() {
 		let mut template = monitored_from_str("[[+\"say hello\" hello Peter    \"how are\" you?]]");
-		template.insert_generator("say hello", echo);
+		template.insert_generator("say hello", echo as fn(&Vec<String>, f: &mut Formatter) -> fmt::Result);
 
 		assert_eq!(template.to_string(), "hello:Peter:how are:you?".into_string());
 	}
@@ -632,8 +642,8 @@ mod test {
 	#[test]
 	fn format_float() {
 		let mut template = monitored_from_str("[[:short]], [[:long]], [[:default]]");
-		template.insert_float("short", 1.2, 1);
-		template.insert_float("long", 1.2, 4);
+		template.insert_formatted_float("short", 1.2, SignificantDigits::DigExact(1), ExponentFormat::ExpNone);
+		template.insert_formatted_float("long", 1.2, SignificantDigits::DigExact(4), ExponentFormat::ExpNone);
 		template.insert("default", 1.2f32);
 		assert_eq!(template.to_string(), "1.2, 1.2000, 1.2".into_string())
 	}
@@ -699,9 +709,9 @@ mod test {
 	#[test]
 	fn wrap_set_generator() {
 		let mut template = monitored_from_str("[[+\"say hello\" hello Peter    \"how are\" you?]]");
-		template.insert_generator("say hello", echo);
+		template.insert_generator("say hello", echo as fn(&Vec<String>, f: &mut Formatter) -> fmt::Result);
 		let mut shell = template.wrap();
-		shell.insert_generator("say hello", echo2);
+		shell.insert_generator("say hello", echo2 as fn(&Vec<String>, f: &mut Formatter) -> fmt::Result);
 
 		assert_eq!(shell.to_string(), "hello_Peter_how are_you?".into_string());
 	}
@@ -709,7 +719,7 @@ mod test {
 	#[test]
 	fn wrap_unset_generator() {
 		let mut template = monitored_from_str("[[+\"say hello\" hello Peter    \"how are\" you?]]");
-		template.insert_generator("say hello", echo);
+		template.insert_generator("say hello", echo as fn(&Vec<String>, f: &mut Formatter) -> fmt::Result);
 		let mut shell = template.wrap();
 		shell.unset_generator("say hello");
 
