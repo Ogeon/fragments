@@ -325,7 +325,7 @@ impl FromStr for Template {
 
 impl fmt::Show for Template {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		format_tokens(self as &InnerTemplate, &self.tokens, f)
+		format_tokens(self as &InnerTemplate, self.tokens.as_slice(), f)
 	}
 }
 
@@ -437,7 +437,7 @@ impl<'r, 'c: 'r> InnerTemplate<'r> for Shell<'r, 'c> {
 
 impl<'r, 'c> fmt::Show for Shell<'r, 'c> {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		format_tokens(self as &InnerTemplate, self.get_tokens(), f)
+		format_tokens(self as &InnerTemplate, self.get_tokens().as_slice(), f)
 	}
 }
 
@@ -456,11 +456,11 @@ pub trait InnerTemplate<'c> {
 
 ///A trait for content generators.
 pub trait Generator {
-	fn generate(&self, args: &Vec<String>, formatter:  &mut fmt::Formatter) -> fmt::Result;
+	fn generate(&self, args: &[String], formatter:  &mut fmt::Formatter) -> fmt::Result;
 }
 
-impl Generator for fn(args: &Vec<String>, &mut fmt::Formatter) -> fmt::Result {
-	fn generate(&self, args: &Vec<String>, formatter:  &mut fmt::Formatter) -> fmt::Result {
+impl Generator for fn(args: &[String], &mut fmt::Formatter) -> fmt::Result {
+	fn generate(&self, args: &[String], formatter:  &mut fmt::Formatter) -> fmt::Result {
 		(*self)(args, formatter)
 	}
 }
@@ -468,7 +468,7 @@ impl Generator for fn(args: &Vec<String>, &mut fmt::Formatter) -> fmt::Result {
 
 
 
-fn format_tokens(template: &InnerTemplate, tokens: &Vec<Token>, f: &mut fmt::Formatter) -> fmt::Result {
+fn format_tokens(template: &InnerTemplate, tokens: &[Token], f: &mut fmt::Formatter) -> fmt::Result {
 	for token in tokens.iter() {
 		let res = match token {
 			&Token::String(ref s) => f.write_str(s.as_slice()),
@@ -482,7 +482,7 @@ fn format_tokens(template: &InnerTemplate, tokens: &Vec<Token>, f: &mut fmt::For
 
 			&Token::Conditional(ref k, expected, ref tokens) => {
 				if template.get_condition(k) == expected {
-					format_tokens(template, tokens, f)
+					format_tokens(template, tokens.as_slice(), f)
 				} else {
 					Ok(())
 				}
@@ -490,7 +490,7 @@ fn format_tokens(template: &InnerTemplate, tokens: &Vec<Token>, f: &mut fmt::For
 
 			&Token::ContentConditional(ref k, expected, ref tokens) => {
 				if template.is_content_definded(k) == expected {
-					format_tokens(template, tokens, f)
+					format_tokens(template, tokens.as_slice(), f)
 				} else {
 					Ok(())
 				}
@@ -498,7 +498,7 @@ fn format_tokens(template: &InnerTemplate, tokens: &Vec<Token>, f: &mut fmt::For
 
 			&Token::Generated(ref k, ref vars) => {
 				match template.find_generator(k) {
-					Some(gen) => gen.generate(vars, f),
+					Some(gen) => gen.generate(vars.as_slice(), f),
 					None => Ok(())
 				}
 			}
@@ -545,11 +545,11 @@ mod test {
 		}
 	}
 
-	fn echo(parts: &Vec<String>, f: &mut Formatter) -> fmt::Result {
+	fn echo(parts: &[String], f: &mut Formatter) -> fmt::Result {
 		parts.connect(":").fmt(f)
 	}
 
-	fn echo2(parts: &Vec<String>, f: &mut Formatter) -> fmt::Result {
+	fn echo2(parts: &[String], f: &mut Formatter) -> fmt::Result {
 		parts.connect("_").fmt(f)
 	}
 
@@ -626,7 +626,7 @@ mod test {
 	#[test]
 	fn generator() {
 		let mut template = monitored_from_str("[[+\"say hello\" hello Peter    \"how are\" you?]]");
-		template.insert_generator("say hello", echo as fn(&Vec<String>, f: &mut Formatter) -> fmt::Result);
+		template.insert_generator("say hello", echo as fn(&[String], f: &mut Formatter) -> fmt::Result);
 
 		assert_eq!(template.to_string(), "hello:Peter:how are:you?".to_string());
 	}
@@ -701,9 +701,9 @@ mod test {
 	#[test]
 	fn wrap_set_generator() {
 		let mut template = monitored_from_str("[[+\"say hello\" hello Peter    \"how are\" you?]]");
-		template.insert_generator("say hello", echo as fn(&Vec<String>, f: &mut Formatter) -> fmt::Result);
+		template.insert_generator("say hello", echo as fn(&[String], f: &mut Formatter) -> fmt::Result);
 		let mut shell = template.wrap();
-		shell.insert_generator("say hello", echo2 as fn(&Vec<String>, f: &mut Formatter) -> fmt::Result);
+		shell.insert_generator("say hello", echo2 as fn(&[String], f: &mut Formatter) -> fmt::Result);
 
 		assert_eq!(shell.to_string(), "hello_Peter_how are_you?".to_string());
 	}
@@ -711,7 +711,7 @@ mod test {
 	#[test]
 	fn wrap_unset_generator() {
 		let mut template = monitored_from_str("[[+\"say hello\" hello Peter    \"how are\" you?]]");
-		template.insert_generator("say hello", echo as fn(&Vec<String>, f: &mut Formatter) -> fmt::Result);
+		template.insert_generator("say hello", echo as fn(&[String], f: &mut Formatter) -> fmt::Result);
 		let mut shell = template.wrap();
 		shell.unset_generator("say hello");
 

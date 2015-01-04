@@ -144,7 +144,7 @@ use std::fmt;
 
 //This function will just concatenate the arguments.
 //I expect you to make cooler generators, yourself ;)
-fn join(parts: &Vec<String>, f: &mut fmt::Formatter) -> fmt::Result {
+fn join(parts: &[String], f: &mut fmt::Formatter) -> fmt::Result {
 	parts.concat().fmt(f)
 }
 
@@ -155,8 +155,8 @@ fn main() {
 	//Insert something into the `name` placeholder
 	template.insert("name", "Peter");
 
-	//Functions with the signature `fn(&Vec<String>) -> Box<Show>` will automatically implement the `Generator` trait
-	template.insert_generator("join", join as fn(&Vec<String>, &mut fmt::Formatter) -> fmt::Result);
+	//Functions with the signature `fn(&[String]) -> Box<Show>` will automatically implement the `Generator` trait
+	template.insert_generator("join", join as fn(&[String], &mut fmt::Formatter) -> fmt::Result);
 
 	//Result: "Hello, Peter! Is it written as 'white space' or 'whitespace'?"
 	println!("Result: '{}'", template);
