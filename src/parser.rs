@@ -57,11 +57,11 @@ impl fmt::Show for LexToken {
 }
 
 
-struct Parser<T, V> {
+struct Parser<T: Iterator<Item=V>, V> {
     tokens: Peekable<V, T>
 }
 
-impl<T: Iterator<V>, V: PartialEq> Parser<T, V> {
+impl<T: Iterator<Item=V>, V: PartialEq> Parser<T, V> {
 	#[inline]
 	fn eat(&mut self, expected: V) -> bool {
 		let eaten = match self.peek() {
@@ -99,21 +99,23 @@ impl<T: Iterator<V>, V: PartialEq> Parser<T, V> {
 	}
 }
 
-impl<T: Iterator<V>, V> Iterator<V> for Parser<T, V> {
+impl<T: Iterator<Item=V>, V> Iterator for Parser<T, V> {
+	type Item = V;
+
 	#[inline]
 	fn next(&mut self) -> Option<V> {
 		self.tokens.by_ref().next()
 	}
 }
 
-pub fn parse<T: Iterator<Result<char, String>>>(chars: &mut T) -> Result<Vec<Token>, String> {
+pub fn parse<T: Iterator<Item=Result<char, String>>>(chars: &mut T) -> Result<Vec<Token>, String> {
 	let tokens = try!(lex(chars));
 	parse_block(&mut Parser{
 		tokens: tokens.into_iter().by_ref().peekable()
 	})
 }
 
-fn lex<T: Iterator<Result<char, String>>>(chars: &mut T) -> Result<Vec<LexToken>, String> {
+fn lex<T: Iterator<Item=Result<char, String>>>(chars: &mut T) -> Result<Vec<LexToken>, String> {
 	let mut chars = chars.by_ref().peekable();
 	let mut tokens = Vec::new();
 
@@ -157,7 +159,7 @@ fn lex<T: Iterator<Result<char, String>>>(chars: &mut T) -> Result<Vec<LexToken>
 	Ok(tokens)
 }
 
-fn parse_block<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) -> Result<Vec<Token>, String> {
+fn parse_block<T: Iterator<Item=LexToken>>(tokens: &mut Parser<T, LexToken>) -> Result<Vec<Token>, String> {
 	let mut result = Vec::new();
 	let mut string = String::new();
 
@@ -214,7 +216,7 @@ fn parse_block<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) -> Resul
 	Ok(result)
 }
 
-fn parse_placeholder<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) -> Result<Token, String> {
+fn parse_placeholder<T: Iterator<Item=LexToken>>(tokens: &mut Parser<T, LexToken>) -> Result<Token, String> {
 	let mut label = String::new();
 
 	for t in tokens.by_ref().take_while(|t| *t != LexToken::End) {
@@ -224,7 +226,7 @@ fn parse_placeholder<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) ->
 	Ok(Token::Placeholder(label))
 }
 
-fn parse_conditional<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) -> Result<Token, String> {
+fn parse_conditional<T: Iterator<Item=LexToken>>(tokens: &mut Parser<T, LexToken>) -> Result<Token, String> {
 	let negative = tokens.eat(LexToken::Exclamation);
 	let content_cond = tokens.eat(LexToken::Colon);
 	let mut label = String::new();
@@ -242,7 +244,7 @@ fn parse_conditional<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) ->
 	}
 }
 
-fn parse_generator<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) -> Result<Token, String> {
+fn parse_generator<T: Iterator<Item=LexToken>>(tokens: &mut Parser<T, LexToken>) -> Result<Token, String> {
 	let mut label = String::new();
 	let mut args = Vec::new();
 
@@ -294,7 +296,7 @@ fn parse_generator<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) -> R
 	Ok(Token::Generated(label, args))
 }
 
-fn parse_block_end<T: Iterator<LexToken>>(tokens: &mut Parser<T, LexToken>) {
+fn parse_block_end<T: Iterator<Item=LexToken>>(tokens: &mut Parser<T, LexToken>) {
 	tokens.by_ref().all(|t| t != LexToken::End);
 }
 

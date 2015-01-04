@@ -1,6 +1,6 @@
 #![doc(html_root_url = "http://ogeon.github.io/fragments/doc/")]
 
-#![feature(macro_rules)]
+#![feature(macro_rules, associated_types)]
 
 use std::fmt;
 use std::fmt::Show;
