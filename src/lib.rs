@@ -84,23 +84,11 @@ pub trait TemplateContent<'a> {
 	fn into_template_content(self) -> ContentType<'a>;
 }
 
-///A trait for types that can be copied and inserted into templates
-pub trait CopyTemplateContent<'a> {
-	///Copy and convert `self` to a suitable `ContentType` variant.
-	fn to_template_content(&self) -> ContentType;
-}
-
 macro_rules! float_content {
 	($($t:ty),+) => {
 		$(impl TemplateContent<'static> for $t {
 			fn into_template_content(self) -> ContentType<'static> {
 				ContentType::Float(self as f64)
-			}
-		}
-
-		impl CopyTemplateContent<'static> for $t {
-			fn to_template_content(&self) -> ContentType<'static> {
-				ContentType::Float(*self as f64)
 			}
 		})+
 	}
@@ -112,12 +100,6 @@ macro_rules! int_content {
 			fn into_template_content(self) -> ContentType<'static> {
 				ContentType::Int(self as i64)
 			}
-		}
-
-		impl CopyTemplateContent<'static> for $t {
-			fn to_template_content(&self) -> ContentType<'static> {
-				ContentType::Int(*self as i64)
-			}
 		})+
 	}
 }
@@ -128,12 +110,6 @@ macro_rules! uint_content {
 			fn into_template_content(self) -> ContentType<'static> {
 				ContentType::UnsignedInt(self as u64)
 			}
-		}
-
-		impl CopyTemplateContent<'static> for $t {
-			fn to_template_content(&self) -> ContentType<'static> {
-				ContentType::UnsignedInt(*self as u64)
-			}
 		})+
 	}
 }
@@ -143,12 +119,6 @@ macro_rules! deref_content {
 		$(impl TemplateContent<'static> for $t {
 			fn into_template_content(self) -> ContentType<'static> {
 				ContentType::$i(self)
-			}
-		}
-
-		impl CopyTemplateContent<'static> for $t {
-			fn to_template_content(&self) -> ContentType<'static> {
-				ContentType::$i(*self)
 			}
 		})+
 	}
@@ -163,12 +133,6 @@ deref_content!([char, Char], [bool, Bool], [&'static str, StaticStr]);
 impl TemplateContent<'static> for String {
 	fn into_template_content(self) -> ContentType<'static> {
 		ContentType::Str(self)
-	}
-}
-
-impl CopyTemplateContent<'static> for String {
-	fn to_template_content(&self) -> ContentType<'static> {
-		ContentType::Str(self.clone())
 	}
 }
 
