@@ -258,7 +258,7 @@ impl<'c> Template<'c> {
 
 	///Insert content.
 	#[inline]
-	pub fn insert<S: ToOwned<String> + ?Sized, T: TemplateContent<'static>>(&mut self, label: &S, item: T) {
+	pub fn insert<S: ToOwned<String> + ?Sized, T: TemplateContent<'c>>(&mut self, label: &S, item: T) {
 		self.content.insert(label.to_owned(), item.into_template_content());
 	}
 
