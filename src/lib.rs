@@ -349,12 +349,12 @@ pub struct Shell<'r, 'c: 'r> {
 
 impl<'r, 'c> Shell<'r, 'c> {
 	///Create a new `Shell` around `base`.
-	pub fn new<'a, 'b, T: InnerTemplate<'b>>(base: &'a T) -> Shell<'a, 'b> {
+	pub fn new<T: InnerTemplate<'c>>(base: &'r T) -> Shell<'r, 'c> {
 		Shell {
 			content: HashMap::new(),
 			generators: HashMap::new(),
 			conditions: HashMap::new(),
-			base: base as &InnerTemplate<'b>
+			base: base as &InnerTemplate<'c>
 		}
 	}
 
