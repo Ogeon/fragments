@@ -30,17 +30,18 @@ pub enum Token {
 }
 
 ///Container enum for template content
-pub enum ContentType<'a> {
+pub enum ContentType<'c> {
 	Float(f64),
 	FormattedFloat(f64, SignificantDigits, ExponentFormat),
 	Int(i64),
 	UnsignedInt(u64),
 	Char(char),
 	Bool(bool),
-	Str(String),
-	StaticStr(&'static str),
-	Template(Template<'a>),
-	Show(Box<fmt::Show + 'a>)
+	String(String),
+	StringSlice(&'c str),
+	Template(Template<'c>),
+	Shell(Shell<'c, 'c>),
+	Show(Box<fmt::Show + 'c>)
 }
 
 macro_rules! call_fmt {
@@ -52,7 +53,7 @@ macro_rules! call_fmt {
 	}
 }
 
-impl<'a> fmt::Show for ContentType<'a> {
+impl<'c> fmt::Show for ContentType<'c> {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		call_fmt! {
 			self,
@@ -69,9 +70,10 @@ impl<'a> fmt::Show for ContentType<'a> {
 			Float,
 			Char,
 			Bool,
-			Str,
-			StaticStr,
+			String,
+			StringSlice,
 			Template,
+			Shell,
 			Show
 		}
 	}
@@ -79,9 +81,9 @@ impl<'a> fmt::Show for ContentType<'a> {
 
 
 ///A trait for types that can be inserted into templates
-pub trait TemplateContent<'a> {
+pub trait TemplateContent<'c> {
 	///Convert `self` to a suitable `ContentType` variant, not making a copy if possible.
-	fn into_template_content(self) -> ContentType<'a>;
+	fn into_template_content(self) -> ContentType<'c>;
 }
 
 macro_rules! float_content {
@@ -127,12 +129,19 @@ macro_rules! deref_content {
 float_content!(f32, f64);
 int_content!(int, i8, i16, i32, i64);
 uint_content!(uint, u8, u16, u32, u64);
-deref_content!([char, Char], [bool, Bool], [&'static str, StaticStr]);
+deref_content!([char, Char], [bool, Bool]);
 
 
 impl TemplateContent<'static> for String {
 	fn into_template_content(self) -> ContentType<'static> {
-		ContentType::Str(self)
+		ContentType::String(self)
+	}
+}
+
+
+impl<'c> TemplateContent<'c> for &'c str {
+	fn into_template_content(self) -> ContentType<'c> {
+		ContentType::StringSlice(self)
 	}
 }
 
@@ -144,15 +153,22 @@ impl<'c> TemplateContent<'c> for Template<'c> {
 }
 
 
-impl<'a> TemplateContent<'a> for Box<Show + 'a> {
-	fn into_template_content(self) -> ContentType<'a> {
+impl<'r, 'c: 'r> TemplateContent<'r> for Shell<'r, 'c> {
+	fn into_template_content(self) -> ContentType<'r> {
+		ContentType::Shell(self)
+	}
+}
+
+
+impl<'c> TemplateContent<'c> for Box<Show + 'c> {
+	fn into_template_content(self) -> ContentType<'c> {
 		ContentType::Show(self)
 	}
 }
 
 
-impl<'a> TemplateContent<'a> for ContentType<'a> {
-	fn into_template_content(self) -> ContentType<'a> {
+impl<'c> TemplateContent<'c> for ContentType<'c> {
+	fn into_template_content(self) -> ContentType<'c> {
 		self
 	}
 }
@@ -679,5 +695,18 @@ mod test {
 		shell.unset_generator("say hello".to_string());
 
 		assert_eq!(shell.to_string(), "".to_string());
+	}
+
+	#[test]
+	fn shells_in_templates() {
+		let mut template1 = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
+		let template2 = monitored_from_str("really [[:something]]");
+		let mut shell = template2.wrap();
+		template1.insert("name".to_string(), PETER);
+		shell.insert("something".to_string(), NICE);
+
+		template1.insert("something".to_string(), shell);
+
+		assert_eq!(template1.to_string(), "Hello, Peter! This is a really nice template.".to_string());
 	}
 }
