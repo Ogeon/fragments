@@ -44,7 +44,7 @@
 <h1 class='fqn'><span class='in-band'>Enum <a href='index.html'>fragments</a>::<wbr><a class='enum' href=''>ContentType</a><wbr></span><span class='out-of-band'><span id='render-detail'>
             <a id="collapse-all" href="#">[-]
             </a>&nbsp;<a id="expand-all" href="#">[+]</a>
-        </span><a id='src-2192' href='../src/fragments/lib.rs.html#34-45'>[src]</a></span></h1>
+        </span><a id='src-2206' href='../src/fragments/lib.rs.html#34-45'>[src]</a></span></h1>
 <pre class='rust enum'>pub enum ContentType&lt;'a&gt; {
     Float(<a href='http://doc.rust-lang.org/nightly/std/primitive.f64.html'>f64</a>),
     FormattedFloat(<a href='http://doc.rust-lang.org/nightly/std/primitive.f64.html'>f64</a>, <a class='enum' href='../fragments/enum.SignificantDigits.html' title='fragments::SignificantDigits'>SignificantDigits</a>, <a class='enum' href='../fragments/enum.ExponentFormat.html' title='fragments::ExponentFormat'>ExponentFormat</a>),
@@ -54,7 +54,7 @@
     Bool(<a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>),
     Str(<a class='struct' href='http://doc.rust-lang.org/nightly/collections/string/struct.String.html' title='collections::string::String'>String</a>),
     StaticStr(&amp;'static <a href='http://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>),
-    Template(<a class='struct' href='../fragments/struct.Template.html' title='fragments::Template'>Template</a>),
+    Template(<a class='struct' href='../fragments/struct.Template.html' title='fragments::Template'>Template</a>&lt;'a&gt;),
     Show(<a class='struct' href='http://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='trait' href='http://doc.rust-lang.org/nightly/core/fmt/trait.Show.html' title='core::fmt::Show'>Show</a> + 'a&gt;),
 }</pre><div class='docblock'><p>Container enum for template content</p>
 </div><h2 class='variants'>Variants</h2>
