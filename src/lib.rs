@@ -40,7 +40,7 @@ pub enum ContentType<'a> {
 	Bool(bool),
 	Str(String),
 	StaticStr(&'static str),
-	Template(Template),
+	Template(Template<'a>),
 	Show(Box<fmt::Show + 'a>)
 }
 
@@ -174,8 +174,8 @@ impl CopyTemplateContent<'static> for String {
 }
 
 
-impl TemplateContent<'static> for Template {
-	fn into_template_content(self) -> ContentType<'static> {
+impl<'c> TemplateContent<'c> for Template<'c> {
+	fn into_template_content(self) -> ContentType<'c> {
 		ContentType::Template(self)
 	}
 }
@@ -216,20 +216,20 @@ impl<'a> TemplateContent<'a> for ContentType<'a> {
 ///Any character can be escaped by writing `\` before it. It can be used like this: `\[[[:label1]], [[:label2]]]`
 ///which will result in `[content1, content2]`, since the first `[` will be ignored by the parser and added to the
 ///rest of the content.
-pub struct Template {
+pub struct Template<'c> {
 	///Content for the placeholders
-	pub content: HashMap<String, ContentType<'static>>,
+	pub content: HashMap<String, ContentType<'c>>,
 	///Content generators
-	pub generators: HashMap<String, Box<Generator + 'static>>,
+	pub generators: HashMap<String, Box<Generator + 'c>>,
 	///Conditional switches
 	pub conditions: HashSet<String>,
 	tokens: Vec<Token>
 }
 
-impl Template {
+impl<'c> Template<'c> {
 	///Create a new `Template` from a character iterator.
 	#[inline]
-	pub fn from_chars(b: &mut std::str::Chars) -> Result<Template, String> {
+	pub fn from_chars(b: &mut std::str::Chars) -> Result<Template<'c>, String> {
 		let tokens = try!(parser::parse(&mut b.map(|r| Ok::<char, String>(r))));
 
 		Ok(Template {
@@ -242,7 +242,7 @@ impl Template {
 
 	///Create a new `Template` from a buffer.
 	#[inline]
-	pub fn from_buffer<T: Buffer>(b: &mut T) -> Result<Template, String> {
+	pub fn from_buffer<T: Buffer>(b: &mut T) -> Result<Template<'c>, String> {
 		let tokens = try!(parser::parse(&mut b.chars().map(|r| match r {
 			Ok(c) => Ok(c),
 			Err(e) => Err(format!("io error: {}", e))
@@ -286,13 +286,13 @@ impl Template {
 
 	///Create a `Shell` around this `Template`.
 	#[inline]
-	pub fn wrap<'a, 'c>(&'a self) -> Shell<'a, 'c> {
+	pub fn wrap<'a: 'c>(&'a self) -> Shell<'a, 'c> {
 		Shell::new(self)
 	}
 }
 
-impl InnerTemplate<'static> for Template {
-	fn find_content<'a>(&'a self, label: &String) -> Option<&'a ContentType<'static>> {
+impl<'c> InnerTemplate<'c> for Template<'c> {
+	fn find_content<'a>(&'a self, label: &String) -> Option<&'a ContentType<'c>> {
 		self.content.get(label)
 	}
 
@@ -304,7 +304,7 @@ impl InnerTemplate<'static> for Template {
 		self.content.contains_key(label)
 	}
 
-	fn find_generator<'a>(&'a self, label: &String) -> Option<&'a Box<Generator + 'static>> {
+	fn find_generator<'a>(&'a self, label: &String) -> Option<&'a Box<Generator + 'c>> {
 		self.generators.get(label)
 	}
 
@@ -313,9 +313,9 @@ impl InnerTemplate<'static> for Template {
 	}
 }
 
-impl FromStr for Template {
+impl<'c> FromStr for Template<'c> {
 	///Creates a new `Template` from a string.
-	fn from_str(s: &str) -> Option<Template> {
+	fn from_str(s: &str) -> Option<Template<'c>> {
 		match Template::from_chars(&mut s.chars()) {
 			Ok(template) => Some(template),
 			Err(_) => None
@@ -323,7 +323,7 @@ impl FromStr for Template {
 	}
 }
 
-impl fmt::Show for Template {
+impl<'c> fmt::Show for Template<'c> {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		format_tokens(self as &InnerTemplate, self.tokens.as_slice(), f)
 	}
