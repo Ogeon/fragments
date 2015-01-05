@@ -438,7 +438,7 @@ pub trait Generator {
 	fn generate(&self, args: &[String], formatter:  &mut fmt::Formatter) -> fmt::Result;
 }
 
-impl Generator for fn(args: &[String], &mut fmt::Formatter) -> fmt::Result {
+impl<F: Fn(&[String], & mut fmt::Formatter) -> fmt::Result> Generator for F {
 	fn generate(&self, args: &[String], formatter:  &mut fmt::Formatter) -> fmt::Result {
 		(*self)(args, formatter)
 	}
@@ -605,8 +605,11 @@ mod test {
 	#[test]
 	fn generator() {
 		let mut template = monitored_from_str("[[+\"say hello\" hello Peter    \"how are\" you?]]");
-		template.insert_generator("say hello".to_string(), echo as fn(&[String], f: &mut Formatter) -> fmt::Result);
 
+		template.insert_generator("say hello".to_string(), echo);
+		assert_eq!(template.to_string(), "hello:Peter:how are:you?".to_string());
+
+		template.insert_generator("say hello".to_string(), |&: parts: &[String], f: &mut fmt::Formatter| parts.connect(":").fmt(f));
 		assert_eq!(template.to_string(), "hello:Peter:how are:you?".to_string());
 	}
 
@@ -680,9 +683,9 @@ mod test {
 	#[test]
 	fn wrap_set_generator() {
 		let mut template = monitored_from_str("[[+\"say hello\" hello Peter    \"how are\" you?]]");
-		template.insert_generator("say hello".to_string(), echo as fn(&[String], f: &mut Formatter) -> fmt::Result);
+		template.insert_generator("say hello".to_string(), echo);
 		let mut shell = template.wrap();
-		shell.insert_generator("say hello".to_string(), echo2 as fn(&[String], f: &mut Formatter) -> fmt::Result);
+		shell.insert_generator("say hello".to_string(), echo2);
 
 		assert_eq!(shell.to_string(), "hello_Peter_how are_you?".to_string());
 	}
@@ -690,7 +693,7 @@ mod test {
 	#[test]
 	fn wrap_unset_generator() {
 		let mut template = monitored_from_str("[[+\"say hello\" hello Peter    \"how are\" you?]]");
-		template.insert_generator("say hello".to_string(), echo as fn(&[String], f: &mut Formatter) -> fmt::Result);
+		template.insert_generator("say hello".to_string(), echo);
 		let mut shell = template.wrap();
 		shell.unset_generator("say hello".to_string());
 
