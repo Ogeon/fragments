@@ -291,24 +291,24 @@ impl<'c> Template<'c> {
 }
 
 impl<'c> InnerTemplate<'c> for Template<'c> {
-	fn find_content<'a>(&'a self, label: &String) -> Option<&'a ContentType<'c>> {
+	fn find_content<'a>(&'a self, label: &str) -> Option<&'a ContentType<'c>> {
 		self.content.get(label)
 	}
 
-	fn get_condition(&self, label: &String) -> bool {
+	fn get_condition(&self, label: &str) -> bool {
 		self.conditions.contains(label)
 	}
 	
-	fn is_content_definded(&self, label: &String) -> bool {
+	fn is_content_defined(&self, label: &str) -> bool {
 		self.content.contains_key(label)
 	}
 
-	fn find_generator<'a>(&'a self, label: &String) -> Option<&'a Box<Generator + 'c>> {
-		self.generators.get(label)
+	fn find_generator<'a>(&'a self, label: &str) -> Option<&'a Generator> {
+		self.generators.get(label).map(|v| &**v)
 	}
 
-	fn get_tokens<'a>(&'a self) -> &'a Vec<Token> {
-		&self.tokens
+	fn get_tokens<'a>(&'a self) -> &'a [Token] {
+		self.tokens.as_slice()
 	}
 }
 
@@ -401,7 +401,7 @@ impl<'r, 'c> Shell<'r, 'c> {
 }
 
 impl<'r, 'c: 'r> InnerTemplate<'r> for Shell<'r, 'c> {
-	fn find_content<'a>(&'a self, label: &String) -> Option<&'a ContentType<'r>> {
+	fn find_content<'a>(&'a self, label: &str) -> Option<&'a ContentType<'r>> {
 		match self.content.get(label) {
 			Some(&Some(ref v)) => Some(v),
 			Some(&None) => None,
@@ -409,27 +409,27 @@ impl<'r, 'c: 'r> InnerTemplate<'r> for Shell<'r, 'c> {
 		}
 	}
 
-	fn get_condition(&self, label: &String) -> bool {
+	fn get_condition(&self, label: &str) -> bool {
 		self.conditions.get(label).map(|&v| v).unwrap_or_else(|| self.base.get_condition(label))
 	}
 	
-	fn is_content_definded(&self, label: &String) -> bool {
+	fn is_content_defined(&self, label: &str) -> bool {
 		match self.content.get(label) {
 			Some(&Some(_)) => true,
 			Some(&None) => false,
-			None => self.base.is_content_definded(label)
+			None => self.base.is_content_defined(label)
 		}
 	}
 
-	fn find_generator<'a>(&'a self, label: &String) -> Option<&'a Box<Generator + 'r>> {
+	fn find_generator<'a>(&'a self, label: &str) -> Option<&'a Generator> {
 		match self.generators.get(label) {
-			Some(&Some(ref v)) => Some(v),
+			Some(&Some(ref v)) => Some(&**v),
 			Some(&None) => None,
 			None => self.base.find_generator(label).map(|v| &*v)
 		}
 	}
 
-	fn get_tokens<'a>(&'a self) -> &'a Vec<Token> {
+	fn get_tokens<'a>(&'a self) -> &'a [Token] {
 		self.base.get_tokens()
 	}
 }
@@ -445,11 +445,11 @@ impl<'r, 'c> fmt::Show for Shell<'r, 'c> {
 
 ///A trait for overridable templates.
 pub trait InnerTemplate<'c> {
-	fn find_content<'a>(&'a self, label: &String) -> Option<&'a ContentType<'c>>;
-	fn get_condition(&self, label: &String) -> bool;
-	fn is_content_definded(&self, label: &String) -> bool;
-	fn find_generator<'a>(&'a self, label: &String) -> Option<&'a Box<Generator + 'c>>;
-	fn get_tokens<'a>(&'a self) -> &'a Vec<Token>;
+	fn find_content<'a>(&'a self, label: &str) -> Option<&'a ContentType<'c>>;
+	fn get_condition(&self, label: &str) -> bool;
+	fn is_content_defined(&self, label: &str) -> bool;
+	fn find_generator<'a>(&'a self, label: &str) -> Option<&'a Generator>;
+	fn get_tokens<'a>(&'a self) -> &'a [Token];
 }
 
 
@@ -473,14 +473,14 @@ fn format_tokens(template: &InnerTemplate, tokens: &[Token], f: &mut fmt::Format
 			&Token::String(ref s) => f.write_str(s.as_slice()),
 
 			&Token::Placeholder(ref k) => {
-				match template.find_content(k) {
+				match template.find_content(k.as_slice()) {
 					Some(value) => value.fmt(f),
 					None => Ok(())
 				}
 			},
 
 			&Token::Conditional(ref k, expected, ref tokens) => {
-				if template.get_condition(k) == expected {
+				if template.get_condition(k.as_slice()) == expected {
 					format_tokens(template, tokens.as_slice(), f)
 				} else {
 					Ok(())
@@ -488,7 +488,7 @@ fn format_tokens(template: &InnerTemplate, tokens: &[Token], f: &mut fmt::Format
 			},
 
 			&Token::ContentConditional(ref k, expected, ref tokens) => {
-				if template.is_content_definded(k) == expected {
+				if template.is_content_defined(k.as_slice()) == expected {
 					format_tokens(template, tokens.as_slice(), f)
 				} else {
 					Ok(())
@@ -496,7 +496,7 @@ fn format_tokens(template: &InnerTemplate, tokens: &[Token], f: &mut fmt::Format
 			},
 
 			&Token::Generated(ref k, ref vars) => {
-				match template.find_generator(k) {
+				match template.find_generator(k.as_slice()) {
 					Some(gen) => gen.generate(vars.as_slice(), f),
 					None => Ok(())
 				}
