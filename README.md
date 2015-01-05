@@ -52,7 +52,7 @@ fn main() {
 	};
 
 	//Insert something into the `name` placeholder
-	template.insert("name", "Peter");
+	template.insert("name".to_string(), "Peter");
 
 	//Templates can be printed as they are
 	//Result: 'Hello, Peter!'
@@ -69,7 +69,7 @@ fn main() {
 	let mut template: Template = "Hello, [[:name]]!".parse().unwrap();
 
 	//Insert something into the `name` placeholder
-	template.insert("name", "Peter");
+	template.insert("name".to_string(), "Peter");
 
 	//Templates can be printed as they are
 	//Result: 'Hello, Peter!'
@@ -90,7 +90,7 @@ fn main() {
 	let mut template: Template = "Hello, [[:name]]! Write placeholders like \\[[:this]] and escape them like \\\\\\[[:this]]".parse().unwrap();
 
 	//Insert something into the `name` placeholder
-	template.insert("name", "Peter");
+	template.insert("name".to_string(), "Peter");
 
 	//Templates can be printed as they are
 	//Result: 'Hello, Peter! Write placeholders like [[:this]] and escape them like \[[:this]]'
@@ -114,14 +114,14 @@ fn main() {
 	let mut template: Template = "Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]".parse().unwrap();
 
 	//Insert something into the `name` placeholder
-	template.insert("name", "Peter");
+	template.insert("name".to_string(), "Peter");
 
 	//Conditions are false by default, so the second sentence will be disabled
 	//Result: 'Hello, Peter!'
 	println!("Result: '{}'", template);
 
 	//Let's enable the hidden part of the template
-	template.set("condition", true);
+	template.set("condition".to_string(), true);
 
 	//Result: 'Hello, Peter! The condition is true.'
 	println!("Result: '{}'", template);
@@ -153,10 +153,10 @@ fn main() {
 	let mut template: Template = "Hello, [[:name]]! Is it written as 'white space' or '[[+join white space]]'?".parse().unwrap();
 
 	//Insert something into the `name` placeholder
-	template.insert("name", "Peter");
+	template.insert("name".to_string(), "Peter");
 
 	//Functions with the signature `fn(&[String]) -> Box<Show>` will automatically implement the `Generator` trait
-	template.insert_generator("join", join as fn(&[String], &mut fmt::Formatter) -> fmt::Result);
+	template.insert_generator("join".to_string(), join as fn(&[String], &mut fmt::Formatter) -> fmt::Result);
 
 	//Result: "Hello, Peter! Is it written as 'white space' or 'whitespace'?"
 	println!("Result: '{}'", template);

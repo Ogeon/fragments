@@ -7,7 +7,6 @@ use std::fmt::Show;
 use std::str::FromStr;
 use std::vec::Vec;
 use std::collections::{HashMap, HashSet};
-use std::borrow::ToOwned;
 use std::num::strconv::{
 	float_to_str_common,
 	SignFormat
@@ -258,29 +257,29 @@ impl<'c> Template<'c> {
 
 	///Insert content.
 	#[inline]
-	pub fn insert<S: ToOwned<String> + ?Sized, T: TemplateContent<'c>>(&mut self, label: &S, item: T) {
-		self.content.insert(label.to_owned(), item.into_template_content());
+	pub fn insert<T: TemplateContent<'c>>(&mut self, label: String, item: T) {
+		self.content.insert(label, item.into_template_content());
 	}
 
 	///Insert a formatted float.
 	#[inline]
-	pub fn insert_formatted_float<S: ToOwned<String> + ?Sized>(&mut self, label: &S, item: f64, precision: SignificantDigits, exponent: ExponentFormat) {
-		self.content.insert(label.to_owned(), ContentType::FormattedFloat(item, precision, exponent));
+	pub fn insert_formatted_float(&mut self, label: String, item: f64, precision: SignificantDigits, exponent: ExponentFormat) {
+		self.content.insert(label, ContentType::FormattedFloat(item, precision, exponent));
 	}
 
 	///Insert a content generator.
 	#[inline]
-	pub fn insert_generator<S: ToOwned<String> + ?Sized, T: Generator + Send>(&mut self, label: &S, gen: T) {
-		self.generators.insert(label.to_owned(), box gen as Box<Generator>);
+	pub fn insert_generator<T: Generator + Send>(&mut self, label: String, gen: T) {
+		self.generators.insert(label, box gen as Box<Generator>);
 	}
 
 	///Set a condition.
 	#[inline]
-	pub fn set<S: ToOwned<String> + ?Sized + Eq + std::hash::Hash>(&mut self, label: &S, value: bool) {
+	pub fn set(&mut self, label: String, value: bool) {
 		if value {
-			self.conditions.insert(label.to_owned());
+			self.conditions.insert(label);
 		} else {
-			self.conditions.remove(label);
+			self.conditions.remove(&label);
 		}
 	}
 
@@ -360,38 +359,38 @@ impl<'r, 'c> Shell<'r, 'c> {
 
 	///Insert content.
 	#[inline]
-	pub fn insert<S: ToOwned<String> + ?Sized, T: TemplateContent<'c>>(&mut self, label: &S, item: T) {
-		self.content.insert(label.to_owned(), Some(item.into_template_content()));
+	pub fn insert<T: TemplateContent<'c>>(&mut self, label: String, item: T) {
+		self.content.insert(label, Some(item.into_template_content()));
 	}
 
 	///Unset content.
 	#[inline]
-	pub fn unset<S: ToOwned<String> + ?Sized>(&mut self, label: &S) {
-		self.content.insert(label.to_owned(), None);
+	pub fn unset(&mut self, label: String) {
+		self.content.insert(label, None);
 	}
 
 	///Insert a formatted float.
 	#[inline]
-	pub fn insert_formatted_float<S: ToOwned<String> + ?Sized>(&mut self, label: &S, item: f64, precision: SignificantDigits, exponent: ExponentFormat) {
-		self.content.insert(label.to_owned(), Some(ContentType::FormattedFloat(item, precision, exponent)));
+	pub fn insert_formatted_float(&mut self, label: String, item: f64, precision: SignificantDigits, exponent: ExponentFormat) {
+		self.content.insert(label, Some(ContentType::FormattedFloat(item, precision, exponent)));
 	}
 
 	///Insert a content generator.
 	#[inline]
-	pub fn insert_generator<S: ToOwned<String> + ?Sized, T: Generator + Send>(&mut self, label: &S, gen: T) {
-		self.generators.insert(label.to_owned(), Some(box gen as Box<Generator>));
+	pub fn insert_generator<T: Generator + Send>(&mut self, label: String, gen: T) {
+		self.generators.insert(label, Some(box gen as Box<Generator>));
 	}
 
 	///Unset a content generator.
 	#[inline]
-	pub fn unset_generator<S: ToOwned<String> + ?Sized>(&mut self, label: &S) {
-		self.generators.insert(label.to_owned(), None);
+	pub fn unset_generator(&mut self, label: String) {
+		self.generators.insert(label, None);
 	}
 
 	///Set a condition.
 	#[inline]
-	pub fn set<S: ToOwned<String> + ?Sized>(&mut self, label: &S, value: bool) {
-		self.conditions.insert(label.to_owned(), value);
+	pub fn set(&mut self, label: String, value: bool) {
+		self.conditions.insert(label, value);
 	}
 
 	///Create an other `Shell` around this `Shell`.
@@ -528,7 +527,7 @@ mod test {
 			fn test_insert() {
 				let mut template: Template = monitored_from_str("[[:v]]");
 				$(
-					template.insert("v", $v);
+					template.insert("v".to_string(), $v);
 					assert_eq!(template.to_string(), $v.to_string());
 				)+
 			}
@@ -580,8 +579,8 @@ mod test {
 	#[test]
 	fn replacement() {
 		let mut template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
-		template.insert("name", PETER);
-		template.insert("something", NICE);
+		template.insert("name".to_string(), PETER);
+		template.insert("something".to_string(), NICE);
 		assert_eq!(template.to_string(), "Hello, Peter! This is a nice template.".to_string());
 	}
 
@@ -589,10 +588,10 @@ mod test {
 	fn templates_in_templates() {
 		let mut template1 = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
 		let mut template2 = monitored_from_str("really [[:something]]");
-		template1.insert("name", PETER);
-		template2.insert("something", NICE);
+		template1.insert("name".to_string(), PETER);
+		template2.insert("something".to_string(), NICE);
 
-		template1.insert("something", template2);
+		template1.insert("something".to_string(), template2);
 
 		assert_eq!(template1.to_string(), "Hello, Peter! This is a really nice template.".to_string());
 	}
@@ -600,18 +599,18 @@ mod test {
 	#[test]
 	fn conditional() {
 		let mut template = monitored_from_str("Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]");
-		template.insert("name", PETER);
+		template.insert("name".to_string(), PETER);
 		assert_eq!(template.to_string(), "Hello, Peter!".to_string());
-		template.set("condition", true);
+		template.set("condition".to_string(), true);
 		assert_eq!(template.to_string(), "Hello, Peter! The condition is true.".to_string());
 	}
 
 	#[test]
 	fn conditional_switch() {
 		let mut template = monitored_from_str("Hello, [[:name]]! The condition is [[?condition]]true[[/condition]][[?!condition]]false[[/condition]].");
-		template.insert("name", PETER);
+		template.insert("name".to_string(), PETER);
 		assert_eq!(template.to_string(), "Hello, Peter! The condition is false.".to_string());
-		template.set("condition", true);
+		template.set("condition".to_string(), true);
 		assert_eq!(template.to_string(), "Hello, Peter! The condition is true.".to_string());
 	}
 
@@ -619,14 +618,14 @@ mod test {
 	fn content_conditional() {
 		let mut template = monitored_from_str("Hello[[?:name]], [[:name]][[/name]]![[?!:name]] I don't know you.[[/!name]]");
 		assert_eq!(template.to_string(), "Hello! I don't know you.".to_string());
-		template.insert("name", PETER);
+		template.insert("name".to_string(), PETER);
 		assert_eq!(template.to_string(), "Hello, Peter!".to_string());
 	}
 
 	#[test]
 	fn generator() {
 		let mut template = monitored_from_str("[[+\"say hello\" hello Peter    \"how are\" you?]]");
-		template.insert_generator("say hello", echo as fn(&[String], f: &mut Formatter) -> fmt::Result);
+		template.insert_generator("say hello".to_string(), echo as fn(&[String], f: &mut Formatter) -> fmt::Result);
 
 		assert_eq!(template.to_string(), "hello:Peter:how are:you?".to_string());
 	}
@@ -634,9 +633,9 @@ mod test {
 	#[test]
 	fn format_float() {
 		let mut template = monitored_from_str("[[:short]], [[:long]], [[:default]]");
-		template.insert_formatted_float("short", 1.2, SignificantDigits::DigExact(1), ExponentFormat::ExpNone);
-		template.insert_formatted_float("long", 1.2, SignificantDigits::DigExact(4), ExponentFormat::ExpNone);
-		template.insert("default", 1.2f32);
+		template.insert_formatted_float("short".to_string(), 1.2, SignificantDigits::DigExact(1), ExponentFormat::ExpNone);
+		template.insert_formatted_float("long".to_string(), 1.2, SignificantDigits::DigExact(4), ExponentFormat::ExpNone);
+		template.insert("default".to_string(), 1.2f32);
 		assert_eq!(template.to_string(), "1.2, 1.2000, 1.2".to_string())
 	}
 
@@ -645,8 +644,8 @@ mod test {
 	#[test]
 	fn wrap_identical() {
 		let mut template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
-		template.insert("name", PETER);
-		template.insert("something", NICE);
+		template.insert("name".to_string(), PETER);
+		template.insert("something".to_string(), NICE);
 		let shell = template.wrap();
 		assert_eq!(template.to_string(), shell.to_string());
 	}
@@ -654,30 +653,30 @@ mod test {
 	#[test]
 	fn wrap_set() {
 		let mut template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
-		template.insert("name", PETER);
-		template.insert("something", NICE);
+		template.insert("name".to_string(), PETER);
+		template.insert("something".to_string(), NICE);
 		let mut shell = template.wrap();
-		shell.insert("name", "Olivia");
+		shell.insert("name".to_string(), "Olivia");
 		assert_eq!(shell.to_string(), "Hello, Olivia! This is a nice template.".to_string());
 	}
 
 	#[test]
 	fn wrap_unset() {
 		let mut template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
-		template.insert("name", PETER);
-		template.insert("something", NICE);
+		template.insert("name".to_string(), PETER);
+		template.insert("something".to_string(), NICE);
 		let mut shell = template.wrap();
-		shell.unset("name");
+		shell.unset("name".to_string());
 		assert_eq!(shell.to_string(), "Hello, ! This is a nice template.".to_string());
 	}
 
 	#[test]
 	fn wrap_condition() {
 		let mut template = monitored_from_str("Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]");
-		template.insert("name", PETER);
-		template.set("condition", true);
+		template.insert("name".to_string(), PETER);
+		template.set("condition".to_string(), true);
 		let mut shell = template.wrap();
-		shell.set("condition", false);
+		shell.set("condition".to_string(), false);
 		assert_eq!(shell.to_string(), "Hello, Peter!".to_string());
 	}
 
@@ -685,25 +684,25 @@ mod test {
 	fn wrap_set_content_condition() {
 		let template = monitored_from_str("Hello[[?:name]], [[:name]][[/name]]![[?!:name]] I don't know you.[[/!name]]");
 		let mut shell = template.wrap();
-		shell.insert("name", PETER);
+		shell.insert("name".to_string(), PETER);
 		assert_eq!(shell.to_string(), "Hello, Peter!".to_string());
 	}
 
 	#[test]
 	fn wrap_unset_content_condition() {
 		let mut template = monitored_from_str("Hello[[?:name]], [[:name]][[/name]]![[?!:name]] I don't know you.[[/!name]]");
-		template.insert("name", PETER);
+		template.insert("name".to_string(), PETER);
 		let mut shell = template.wrap();
-		shell.unset("name");
+		shell.unset("name".to_string());
 		assert_eq!(shell.to_string(), "Hello! I don't know you.".to_string());
 	}
 
 	#[test]
 	fn wrap_set_generator() {
 		let mut template = monitored_from_str("[[+\"say hello\" hello Peter    \"how are\" you?]]");
-		template.insert_generator("say hello", echo as fn(&[String], f: &mut Formatter) -> fmt::Result);
+		template.insert_generator("say hello".to_string(), echo as fn(&[String], f: &mut Formatter) -> fmt::Result);
 		let mut shell = template.wrap();
-		shell.insert_generator("say hello", echo2 as fn(&[String], f: &mut Formatter) -> fmt::Result);
+		shell.insert_generator("say hello".to_string(), echo2 as fn(&[String], f: &mut Formatter) -> fmt::Result);
 
 		assert_eq!(shell.to_string(), "hello_Peter_how are_you?".to_string());
 	}
@@ -711,9 +710,9 @@ mod test {
 	#[test]
 	fn wrap_unset_generator() {
 		let mut template = monitored_from_str("[[+\"say hello\" hello Peter    \"how are\" you?]]");
-		template.insert_generator("say hello", echo as fn(&[String], f: &mut Formatter) -> fmt::Result);
+		template.insert_generator("say hello".to_string(), echo as fn(&[String], f: &mut Formatter) -> fmt::Result);
 		let mut shell = template.wrap();
-		shell.unset_generator("say hello");
+		shell.unset_generator("say hello".to_string());
 
 		assert_eq!(shell.to_string(), "".to_string());
 	}
