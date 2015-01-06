@@ -78,7 +78,7 @@ impl<T: Iterator<Item=V>, V: PartialEq> Parser<T, V> {
 		eaten
 	}
 
-	fn eat_while(&mut self, is_edible: |&V| -> bool) {
+	fn eat_while<F: Fn(&V) -> bool>(&mut self, is_edible: F) {
 		loop {
 			let eaten = match self.peek() {
 				Some(t) => is_edible(t),
