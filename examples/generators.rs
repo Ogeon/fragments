@@ -1,6 +1,7 @@
+#![allow(unstable)]
 extern crate fragments;
 use fragments::Template;
-use std::fmt::Show;
+use std::borrow::ToOwned;
 use std::fmt;
 
 fn main() {
@@ -8,16 +9,16 @@ fn main() {
 	let mut template: Template = "Hello, [[:name]]! Is it written as 'white space' or '[[+join white space]]'?".parse().unwrap();
 
 	//Insert something into the `name` placeholder
-	template.insert("name".to_string(), "Peter");
+	template.insert("name".to_owned(), "Peter");
 
 	//Closures and functions with the signature
     //`fn(&[String], &mut fmt::Formatter) -> fmt::Result`
     //will automatically implement the `Generator` trait.
     //This generator will just concatenate the arguments.
     //I expect you to make cooler generators, yourself ;)
-	template.insert_generator("join".to_string(),
+	template.insert_generator("join".to_owned(),
         |&: parts: &[String], f: &mut fmt::Formatter| {
-            parts.concat().fmt(f)
+            fmt::String::fmt(&parts.concat(), f)
         }
     );
 

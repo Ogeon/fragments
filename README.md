@@ -37,8 +37,10 @@ must contain a `:` at the beginning of a label. Multiple placeholders with the s
 will be filled with the same content.
 
 ```rust
+#![allow(unstable)]
 extern crate fragments;
 use fragments::Template;
+use std::borrow::ToOwned;
 use std::io::{BufferedReader, File};
 use std::path::Path;
 
@@ -52,7 +54,7 @@ fn main() {
 	};
 
 	//Insert something into the `name` placeholder
-	template.insert("name".to_string(), "Peter");
+	template.insert("name".to_owned(), "Peter");
 
 	//Templates can be printed as they are
 	//Result: 'Hello, Peter!'
@@ -61,15 +63,17 @@ fn main() {
 ```
 
 ```rust
+#![allow(unstable)]
 extern crate fragments;
 use fragments::Template;
+use std::borrow::ToOwned;
 
 fn main() {
 	//Create a new Template from a string
 	let mut template: Template = "Hello, [[:name]]!".parse().unwrap();
 
 	//Insert something into the `name` placeholder
-	template.insert("name".to_string(), "Peter");
+	template.insert("name".to_owned(), "Peter");
 
 	//Templates can be printed as they are
 	//Result: 'Hello, Peter!'
@@ -80,8 +84,10 @@ fn main() {
 ##Escape Sequences
 Any character with a `\` in front of it will be treated as any other character by the parser:
 ```rust
+#![allow(unstable)]
 extern crate fragments;
 use fragments::Template;
+use std::borrow::ToOwned;
 
 fn main() {
 	//Create a new Template from a string
@@ -90,7 +96,7 @@ fn main() {
 	let mut template: Template = "Hello, [[:name]]! Write placeholders like \\[[:this]] and escape them like \\\\\\[[:this]]".parse().unwrap();
 
 	//Insert something into the `name` placeholder
-	template.insert("name".to_string(), "Peter");
+	template.insert("name".to_owned(), "Peter");
 
 	//Templates can be printed as they are
 	//Result: 'Hello, Peter! Write placeholders like [[:this]] and escape them like \[[:this]]'
@@ -106,22 +112,24 @@ of the conditional part. The end token may contain anything after the `/`,
 which allows them to be labeled, like this: `[[?something]]...[[/something]]`.
 
 ```rust
+#![allow(unstable)]
 extern crate fragments;
 use fragments::Template;
+use std::borrow::ToOwned;
 
 fn main() {
 	//Create a new Template from a string
 	let mut template: Template = "Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]".parse().unwrap();
 
 	//Insert something into the `name` placeholder
-	template.insert("name".to_string(), "Peter");
+	template.insert("name".to_owned(), "Peter");
 
 	//Conditions are false by default, so the second sentence will be disabled
 	//Result: 'Hello, Peter!'
 	println!("Result: '{}'", template);
 
 	//Let's enable the hidden part of the template
-	template.set("condition".to_string(), true);
+	template.set("condition".to_owned(), true);
 
 	//Result: 'Hello, Peter! The condition is true.'
 	println!("Result: '{}'", template);
@@ -137,9 +145,10 @@ separated by one or more whitespaces. They can also be quoted to prevent special
 result will be inserted into the content.
 
 ```rust
+#![allow(unstable)]
 extern crate fragments;
 use fragments::Template;
-use std::fmt::Show;
+use std::borrow::ToOwned;
 use std::fmt;
 
 fn main() {
@@ -147,16 +156,16 @@ fn main() {
 	let mut template: Template = "Hello, [[:name]]! Is it written as 'white space' or '[[+join white space]]'?".parse().unwrap();
 
 	//Insert something into the `name` placeholder
-	template.insert("name".to_string(), "Peter");
+	template.insert("name".to_owned(), "Peter");
 
 	//Closures and functions with the signature
     //`fn(&[String], &mut fmt::Formatter) -> fmt::Result`
     //will automatically implement the `Generator` trait.
     //This generator will just concatenate the arguments.
     //I expect you to make cooler generators, yourself ;)
-	template.insert_generator("join".to_string(),
+	template.insert_generator("join".to_owned(),
         |&: parts: &[String], f: &mut fmt::Formatter| {
-            parts.concat().fmt(f)
+            fmt::String::fmt(&parts.concat(), f)
         }
     );
 

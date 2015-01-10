@@ -1,7 +1,7 @@
 #![doc(html_root_url = "http://ogeon.github.io/fragments/doc/")]
+#![allow(unstable)]
 
 use std::fmt;
-use std::fmt::Show;
 use std::str::FromStr;
 use std::vec::Vec;
 use std::collections::{HashMap, HashSet};
@@ -39,26 +39,30 @@ pub enum ContentType<'c> {
 	StringSlice(&'c str),
 	Template(Template<'c>),
 	Shell(Shell<'c, 'c>),
-	Show(Box<fmt::Show + 'c>)
+	Fmt(Box<fmt::String + 'c>)
 }
 
 macro_rules! call_fmt {
 	($slf:ident, $f:ident: $($p:pat => $b:expr),+ and $($t:ident),+) => {
 		match $slf {
 			$($p => $b,)+
-			$(&ContentType::$t(ref v) => v.fmt($f)),+
+			$(&ContentType::$t(ref v) => fmt::String::fmt(v, $f)),+
 		}
 	}
 }
 
-impl<'c> fmt::Show for ContentType<'c> {
+impl<'c> fmt::String for ContentType<'c> {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		call_fmt! {
 			self,
 			f:
 			&ContentType::FormattedFloat(v, sig, exp) => {
 				let (string, _special) = float_to_str_common(v, 10, false, SignFormat::SignNeg, sig, exp, false);
-				string.fmt(f)
+				fmt::String::fmt(&string, f)
+			},
+			&ContentType::Fmt(ref v) => {
+				use std::fmt::String;
+				(**v).fmt(f)
 			}
 			
 			and
@@ -71,8 +75,7 @@ impl<'c> fmt::Show for ContentType<'c> {
 			String,
 			StringSlice,
 			Template,
-			Shell,
-			Show
+			Shell
 		}
 	}
 }
@@ -125,8 +128,8 @@ macro_rules! deref_content {
 }
 
 float_content!(f32, f64);
-int_content!(int, i8, i16, i32, i64);
-uint_content!(uint, u8, u16, u32, u64);
+int_content!(isize, i8, i16, i32, i64);
+uint_content!(usize, u8, u16, u32, u64);
 deref_content!([char, Char], [bool, Bool]);
 
 
@@ -158,9 +161,9 @@ impl<'r, 'c: 'r> TemplateContent<'r> for Shell<'r, 'c> {
 }
 
 
-impl<'c> TemplateContent<'c> for Box<Show + 'c> {
+impl<'c> TemplateContent<'c> for Box<fmt::String + 'c> {
 	fn into_template_content(self) -> ContentType<'c> {
-		ContentType::Show(self)
+		ContentType::Fmt(self)
 	}
 }
 
@@ -248,7 +251,7 @@ impl<'c> Template<'c> {
 	///Insert a content generator.
 	#[inline]
 	pub fn insert_generator<T: Generator + Send>(&mut self, label: String, gen: T) {
-		self.generators.insert(label, box gen as Box<Generator>);
+		self.generators.insert(label, Box::new(gen) as Box<Generator>);
 	}
 
 	///Set a condition.
@@ -300,7 +303,7 @@ impl<'c> FromStr for Template<'c> {
 	}
 }
 
-impl<'c> fmt::Show for Template<'c> {
+impl<'c> fmt::String for Template<'c> {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		format_tokens(self as &InnerTemplate, self.tokens.as_slice(), f)
 	}
@@ -356,7 +359,7 @@ impl<'r, 'c> Shell<'r, 'c> {
 	///Insert a content generator.
 	#[inline]
 	pub fn insert_generator<T: Generator + Send>(&mut self, label: String, gen: T) {
-		self.generators.insert(label, Some(box gen as Box<Generator>));
+		self.generators.insert(label, Some(Box::new(gen) as Box<Generator>));
 	}
 
 	///Unset a content generator.
@@ -412,7 +415,7 @@ impl<'r, 'c: 'r> InnerTemplate<'r> for Shell<'r, 'c> {
 	}
 }
 
-impl<'r, 'c> fmt::Show for Shell<'r, 'c> {
+impl<'r, 'c> fmt::String for Shell<'r, 'c> {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		format_tokens(self as &InnerTemplate, self.get_tokens().as_slice(), f)
 	}
@@ -452,7 +455,7 @@ fn format_tokens(template: &InnerTemplate, tokens: &[Token], f: &mut fmt::Format
 
 			&Token::Placeholder(ref k) => {
 				match template.find_content(k.as_slice()) {
-					Some(value) => value.fmt(f),
+					Some(value) => fmt::String::fmt(value, f),
 					None => Ok(())
 				}
 			},
@@ -496,8 +499,8 @@ fn format_tokens(template: &InnerTemplate, tokens: &[Token], f: &mut fmt::Format
 #[cfg(test)]
 mod test {
 	use super::{Template, Token, SignificantDigits, ExponentFormat};
-	use std::fmt::{Show, Formatter};
 	use std::fmt;
+	use std::borrow::ToOwned;
 
 	macro_rules! test_insert {
 		($($v:expr),+) => {
@@ -505,7 +508,7 @@ mod test {
 			fn test_insert() {
 				let mut template: Template = monitored_from_str("[[:v]]");
 				$(
-					template.insert("v".to_string(), $v);
+					template.insert("v".to_owned(), $v);
 					assert_eq!(template.to_string(), $v.to_string());
 				)+
 			}
@@ -522,22 +525,22 @@ mod test {
 		}
 	}
 
-	fn echo(parts: &[String], f: &mut Formatter) -> fmt::Result {
-		parts.connect(":").fmt(f)
+	fn echo(parts: &[String], f: &mut fmt::Formatter) -> fmt::Result {
+		fmt::String::fmt(&parts.connect(":"), f)
 	}
 
-	fn echo2(parts: &[String], f: &mut Formatter) -> fmt::Result {
-		parts.connect("_").fmt(f)
+	fn echo2(parts: &[String], f: &mut fmt::Formatter) -> fmt::Result {
+		fmt::String::fmt(&parts.connect("_"), f)
 	}
 
 	#[test]
 	fn basic_tokens() {
 		let template: Template = "Hello, [[:name]]! This is a [[:something]] template.".parse().unwrap();
-		assert_eq!(template.tokens[0], Token::String("Hello, ".to_string()));
-		assert_eq!(template.tokens[1], Token::Placeholder("name".to_string()));
-		assert_eq!(template.tokens[2], Token::String("! This is a ".to_string()));
-		assert_eq!(template.tokens[3], Token::Placeholder("something".to_string()));
-		assert_eq!(template.tokens[4], Token::String(" template.".to_string()));
+		assert_eq!(template.tokens[0], Token::String("Hello, ".to_owned()));
+		assert_eq!(template.tokens[1], Token::Placeholder("name".to_owned()));
+		assert_eq!(template.tokens[2], Token::String("! This is a ".to_owned()));
+		assert_eq!(template.tokens[3], Token::Placeholder("something".to_owned()));
+		assert_eq!(template.tokens[4], Token::String(" template.".to_owned()));
 	}
 
 	#[test]
@@ -549,75 +552,75 @@ mod test {
 	#[test]
 	fn escaped_tokens() {
 		let template = monitored_from_str("Hello, [[:name]]! Write placeholders like \\[[:this]] and escape them like \\\\\\[[:this]]");
-		assert_eq!(template.tokens[0], Token::String("Hello, ".to_string()));
-		assert_eq!(template.tokens[1], Token::Placeholder("name".to_string()));
-		assert_eq!(template.tokens[2], Token::String("! Write placeholders like [[:this]] and escape them like \\[[:this]]".to_string()));
+		assert_eq!(template.tokens[0], Token::String("Hello, ".to_owned()));
+		assert_eq!(template.tokens[1], Token::Placeholder("name".to_owned()));
+		assert_eq!(template.tokens[2], Token::String("! Write placeholders like [[:this]] and escape them like \\[[:this]]".to_owned()));
 	}
 
 	#[test]
 	fn replacement() {
 		let mut template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
-		template.insert("name".to_string(), PETER);
-		template.insert("something".to_string(), NICE);
-		assert_eq!(template.to_string(), "Hello, Peter! This is a nice template.".to_string());
+		template.insert("name".to_owned(), PETER);
+		template.insert("something".to_owned(), NICE);
+		assert_eq!(template.to_string(), "Hello, Peter! This is a nice template.".to_owned());
 	}
 
 	#[test]
 	fn templates_in_templates() {
 		let mut template1 = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
 		let mut template2 = monitored_from_str("really [[:something]]");
-		template1.insert("name".to_string(), PETER);
-		template2.insert("something".to_string(), NICE);
+		template1.insert("name".to_owned(), PETER);
+		template2.insert("something".to_owned(), NICE);
 
-		template1.insert("something".to_string(), template2);
+		template1.insert("something".to_owned(), template2);
 
-		assert_eq!(template1.to_string(), "Hello, Peter! This is a really nice template.".to_string());
+		assert_eq!(template1.to_string(), "Hello, Peter! This is a really nice template.".to_owned());
 	}
 
 	#[test]
 	fn conditional() {
 		let mut template = monitored_from_str("Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]");
-		template.insert("name".to_string(), PETER);
-		assert_eq!(template.to_string(), "Hello, Peter!".to_string());
-		template.set("condition".to_string(), true);
-		assert_eq!(template.to_string(), "Hello, Peter! The condition is true.".to_string());
+		template.insert("name".to_owned(), PETER);
+		assert_eq!(template.to_string(), "Hello, Peter!".to_owned());
+		template.set("condition".to_owned(), true);
+		assert_eq!(template.to_string(), "Hello, Peter! The condition is true.".to_owned());
 	}
 
 	#[test]
 	fn conditional_switch() {
 		let mut template = monitored_from_str("Hello, [[:name]]! The condition is [[?condition]]true[[/condition]][[?!condition]]false[[/condition]].");
-		template.insert("name".to_string(), PETER);
-		assert_eq!(template.to_string(), "Hello, Peter! The condition is false.".to_string());
-		template.set("condition".to_string(), true);
-		assert_eq!(template.to_string(), "Hello, Peter! The condition is true.".to_string());
+		template.insert("name".to_owned(), PETER);
+		assert_eq!(template.to_string(), "Hello, Peter! The condition is false.".to_owned());
+		template.set("condition".to_owned(), true);
+		assert_eq!(template.to_string(), "Hello, Peter! The condition is true.".to_owned());
 	}
 
 	#[test]
 	fn content_conditional() {
 		let mut template = monitored_from_str("Hello[[?:name]], [[:name]][[/name]]![[?!:name]] I don't know you.[[/!name]]");
-		assert_eq!(template.to_string(), "Hello! I don't know you.".to_string());
-		template.insert("name".to_string(), PETER);
-		assert_eq!(template.to_string(), "Hello, Peter!".to_string());
+		assert_eq!(template.to_string(), "Hello! I don't know you.".to_owned());
+		template.insert("name".to_owned(), PETER);
+		assert_eq!(template.to_string(), "Hello, Peter!".to_owned());
 	}
 
 	#[test]
 	fn generator() {
 		let mut template = monitored_from_str("[[+\"say hello\" hello Peter    \"how are\" you?]]");
 
-		template.insert_generator("say hello".to_string(), echo);
-		assert_eq!(template.to_string(), "hello:Peter:how are:you?".to_string());
+		template.insert_generator("say hello".to_owned(), echo);
+		assert_eq!(template.to_string(), "hello:Peter:how are:you?".to_owned());
 
-		template.insert_generator("say hello".to_string(), |&: parts: &[String], f: &mut fmt::Formatter| parts.connect(":").fmt(f));
-		assert_eq!(template.to_string(), "hello:Peter:how are:you?".to_string());
+		template.insert_generator("say hello".to_owned(), |&: parts: &[String], f: &mut fmt::Formatter| fmt::String::fmt(&parts.connect(":"), f));
+		assert_eq!(template.to_string(), "hello:Peter:how are:you?".to_owned());
 	}
 
 	#[test]
 	fn format_float() {
 		let mut template = monitored_from_str("[[:short]], [[:long]], [[:default]]");
-		template.insert_formatted_float("short".to_string(), 1.2, SignificantDigits::DigExact(1), ExponentFormat::ExpNone);
-		template.insert_formatted_float("long".to_string(), 1.2, SignificantDigits::DigExact(4), ExponentFormat::ExpNone);
-		template.insert("default".to_string(), 1.2f32);
-		assert_eq!(template.to_string(), "1.2, 1.2000, 1.2".to_string())
+		template.insert_formatted_float("short".to_owned(), 1.2, SignificantDigits::DigExact(1), ExponentFormat::ExpNone);
+		template.insert_formatted_float("long".to_owned(), 1.2, SignificantDigits::DigExact(4), ExponentFormat::ExpNone);
+		template.insert("default".to_owned(), 1.2f32);
+		assert_eq!(template.to_string(), "1.2, 1.2000, 1.2".to_owned())
 	}
 
 	test_insert!(1u8, 1u16, 1u32, 1u64, 1i8, 1i16, 1i32, 1i64, 'A', true, false);
@@ -625,8 +628,8 @@ mod test {
 	#[test]
 	fn wrap_identical() {
 		let mut template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
-		template.insert("name".to_string(), PETER);
-		template.insert("something".to_string(), NICE);
+		template.insert("name".to_owned(), PETER);
+		template.insert("something".to_owned(), NICE);
 		let shell = template.wrap();
 		assert_eq!(template.to_string(), shell.to_string());
 	}
@@ -634,68 +637,68 @@ mod test {
 	#[test]
 	fn wrap_set() {
 		let mut template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
-		template.insert("name".to_string(), PETER);
-		template.insert("something".to_string(), NICE);
+		template.insert("name".to_owned(), PETER);
+		template.insert("something".to_owned(), NICE);
 		let mut shell = template.wrap();
-		shell.insert("name".to_string(), "Olivia");
-		assert_eq!(shell.to_string(), "Hello, Olivia! This is a nice template.".to_string());
+		shell.insert("name".to_owned(), "Olivia");
+		assert_eq!(shell.to_string(), "Hello, Olivia! This is a nice template.".to_owned());
 	}
 
 	#[test]
 	fn wrap_unset() {
 		let mut template = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
-		template.insert("name".to_string(), PETER);
-		template.insert("something".to_string(), NICE);
+		template.insert("name".to_owned(), PETER);
+		template.insert("something".to_owned(), NICE);
 		let mut shell = template.wrap();
-		shell.unset("name".to_string());
-		assert_eq!(shell.to_string(), "Hello, ! This is a nice template.".to_string());
+		shell.unset("name".to_owned());
+		assert_eq!(shell.to_string(), "Hello, ! This is a nice template.".to_owned());
 	}
 
 	#[test]
 	fn wrap_condition() {
 		let mut template = monitored_from_str("Hello, [[:name]]![[?condition]] The condition is true.[[/condition]]");
-		template.insert("name".to_string(), PETER);
-		template.set("condition".to_string(), true);
+		template.insert("name".to_owned(), PETER);
+		template.set("condition".to_owned(), true);
 		let mut shell = template.wrap();
-		shell.set("condition".to_string(), false);
-		assert_eq!(shell.to_string(), "Hello, Peter!".to_string());
+		shell.set("condition".to_owned(), false);
+		assert_eq!(shell.to_string(), "Hello, Peter!".to_owned());
 	}
 
 	#[test]
 	fn wrap_set_content_condition() {
 		let template = monitored_from_str("Hello[[?:name]], [[:name]][[/name]]![[?!:name]] I don't know you.[[/!name]]");
 		let mut shell = template.wrap();
-		shell.insert("name".to_string(), PETER);
-		assert_eq!(shell.to_string(), "Hello, Peter!".to_string());
+		shell.insert("name".to_owned(), PETER);
+		assert_eq!(shell.to_string(), "Hello, Peter!".to_owned());
 	}
 
 	#[test]
 	fn wrap_unset_content_condition() {
 		let mut template = monitored_from_str("Hello[[?:name]], [[:name]][[/name]]![[?!:name]] I don't know you.[[/!name]]");
-		template.insert("name".to_string(), PETER);
+		template.insert("name".to_owned(), PETER);
 		let mut shell = template.wrap();
-		shell.unset("name".to_string());
-		assert_eq!(shell.to_string(), "Hello! I don't know you.".to_string());
+		shell.unset("name".to_owned());
+		assert_eq!(shell.to_string(), "Hello! I don't know you.".to_owned());
 	}
 
 	#[test]
 	fn wrap_set_generator() {
 		let mut template = monitored_from_str("[[+\"say hello\" hello Peter    \"how are\" you?]]");
-		template.insert_generator("say hello".to_string(), echo);
+		template.insert_generator("say hello".to_owned(), echo);
 		let mut shell = template.wrap();
-		shell.insert_generator("say hello".to_string(), echo2);
+		shell.insert_generator("say hello".to_owned(), echo2);
 
-		assert_eq!(shell.to_string(), "hello_Peter_how are_you?".to_string());
+		assert_eq!(shell.to_string(), "hello_Peter_how are_you?".to_owned());
 	}
 
 	#[test]
 	fn wrap_unset_generator() {
 		let mut template = monitored_from_str("[[+\"say hello\" hello Peter    \"how are\" you?]]");
-		template.insert_generator("say hello".to_string(), echo);
+		template.insert_generator("say hello".to_owned(), echo);
 		let mut shell = template.wrap();
-		shell.unset_generator("say hello".to_string());
+		shell.unset_generator("say hello".to_owned());
 
-		assert_eq!(shell.to_string(), "".to_string());
+		assert_eq!(shell.to_string(), "".to_owned());
 	}
 
 	#[test]
@@ -703,11 +706,11 @@ mod test {
 		let mut template1 = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
 		let template2 = monitored_from_str("really [[:something]]");
 		let mut shell = template2.wrap();
-		template1.insert("name".to_string(), PETER);
-		shell.insert("something".to_string(), NICE);
+		template1.insert("name".to_owned(), PETER);
+		shell.insert("something".to_owned(), NICE);
 
-		template1.insert("something".to_string(), shell);
+		template1.insert("something".to_owned(), shell);
 
-		assert_eq!(template1.to_string(), "Hello, Peter! This is a really nice template.".to_string());
+		assert_eq!(template1.to_string(), "Hello, Peter! This is a really nice template.".to_owned());
 	}
 }
