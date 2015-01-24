@@ -165,7 +165,7 @@ fn main() {
     //I expect you to make cooler generators, yourself ;)
 	template.insert_generator("join".to_owned(),
         |&: parts: &[String], f: &mut fmt::Formatter| {
-            fmt::String::fmt(&parts.concat(), f)
+            fmt::Display::fmt(&parts.concat(), f)
         }
     );
 

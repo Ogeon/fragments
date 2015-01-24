@@ -39,29 +39,29 @@ pub enum ContentType<'c> {
 	StringSlice(&'c str),
 	Template(Template<'c>),
 	Shell(Shell<'c, 'c>),
-	Fmt(Box<fmt::String + 'c>)
+	Fmt(Box<fmt::Display + 'c>)
 }
 
 macro_rules! call_fmt {
 	($slf:ident, $f:ident: $($p:pat => $b:expr),+ and $($t:ident),+) => {
 		match $slf {
 			$($p => $b,)+
-			$(&ContentType::$t(ref v) => fmt::String::fmt(v, $f)),+
+			$(&ContentType::$t(ref v) => fmt::Display::fmt(v, $f)),+
 		}
 	}
 }
 
-impl<'c> fmt::String for ContentType<'c> {
+impl<'c> fmt::Display for ContentType<'c> {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		call_fmt! {
 			self,
 			f:
 			&ContentType::FormattedFloat(v, sig, exp) => {
 				let (string, _special) = float_to_str_common(v, 10, false, SignFormat::SignNeg, sig, exp, false);
-				fmt::String::fmt(&string, f)
+				fmt::Display::fmt(&string, f)
 			},
 			&ContentType::Fmt(ref v) => {
-				use std::fmt::String;
+				use std::fmt::Display;
 				(**v).fmt(f)
 			}
 			
@@ -161,7 +161,7 @@ impl<'r, 'c: 'r> TemplateContent<'r> for Shell<'r, 'c> {
 }
 
 
-impl<'c> TemplateContent<'c> for Box<fmt::String + 'c> {
+impl<'c> TemplateContent<'c> for Box<fmt::Display + 'c> {
 	fn into_template_content(self) -> ContentType<'c> {
 		ContentType::Fmt(self)
 	}
@@ -307,7 +307,7 @@ impl<'c> FromStr for Template<'c> {
 	}
 }
 
-impl<'c> fmt::String for Template<'c> {
+impl<'c> fmt::Display for Template<'c> {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		format_tokens(self as &InnerTemplate, self.tokens.as_slice(), f)
 	}
@@ -419,7 +419,7 @@ impl<'r, 'c: 'r> InnerTemplate<'r> for Shell<'r, 'c> {
 	}
 }
 
-impl<'r, 'c> fmt::String for Shell<'r, 'c> {
+impl<'r, 'c> fmt::Display for Shell<'r, 'c> {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		self.base.render(self as &InnerTemplate, f)
 	}
@@ -459,7 +459,7 @@ fn format_tokens(template: &InnerTemplate, tokens: &[Token], f: &mut fmt::Format
 
 			&Token::Placeholder(ref k) => {
 				match template.get_content(k.as_slice()) {
-					Some(value) => fmt::String::fmt(value, f),
+					Some(value) => fmt::Display::fmt(value, f),
 					None => Ok(())
 				}
 			},
@@ -530,11 +530,11 @@ mod test {
 	}
 
 	fn echo(parts: &[String], f: &mut fmt::Formatter) -> fmt::Result {
-		fmt::String::fmt(&parts.connect(":"), f)
+		fmt::Display::fmt(&parts.connect(":"), f)
 	}
 
 	fn echo2(parts: &[String], f: &mut fmt::Formatter) -> fmt::Result {
-		fmt::String::fmt(&parts.connect("_"), f)
+		fmt::Display::fmt(&parts.connect("_"), f)
 	}
 
 	#[test]
@@ -614,7 +614,7 @@ mod test {
 		template.insert_generator("say hello".to_owned(), echo);
 		assert_eq!(template.to_string(), "hello:Peter:how are:you?".to_owned());
 
-		template.insert_generator("say hello".to_owned(), |&: parts: &[String], f: &mut fmt::Formatter| fmt::String::fmt(&parts.connect(":"), f));
+		template.insert_generator("say hello".to_owned(), |&: parts: &[String], f: &mut fmt::Formatter| fmt::Display::fmt(&parts.connect(":"), f));
 		assert_eq!(template.to_string(), "hello:Peter:how are:you?".to_owned());
 	}
 

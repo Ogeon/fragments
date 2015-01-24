@@ -38,7 +38,7 @@ impl LexToken {
 	}
 }
 
-impl fmt::String for LexToken {
+impl fmt::Display for LexToken {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		match *self {
 			LexToken::Begin => {
