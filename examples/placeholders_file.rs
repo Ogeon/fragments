@@ -1,8 +1,8 @@
-#![allow(unstable)]
+#![feature(path, core, io)]
 extern crate fragments;
 use fragments::Template;
 use std::borrow::ToOwned;
-use std::io::{BufferedReader, File};
+use std::old_io::{BufferedReader, File};
 use std::path::Path;
 
 fn main() {

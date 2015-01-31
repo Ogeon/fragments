@@ -1,5 +1,5 @@
 #![doc(html_root_url = "http://ogeon.github.io/fragments/doc/")]
-#![allow(unstable)]
+#![feature(core, std_misc, io)]
 
 use std::fmt;
 use std::str::FromStr;
@@ -18,7 +18,7 @@ pub use std::num::strconv::{
 mod parser;
 
 ///Internal representation of template parts.
-#[derive(PartialEq, Show)]
+#[derive(PartialEq, Debug)]
 pub enum Token {
 	String(String),
 	Placeholder(String),
@@ -178,7 +178,7 @@ impl<'c> TemplateContent<'c> for ContentType<'c> {
 ///
 ///Placeholders are written as `[[:label]]`, where `label` becomes the name of the placeholder.
 ///The label is then used to insert content: `my_template.insert("label", my_content);`.
-///The assigned content for a placeholder can be anything that implements `Show`.
+///The assigned content for a placeholder can be anything that implements `Display`.
 ///Even other templates may be inserted, which allows a more atomic structure.
 ///
 ///Conditional segments are surrounded by `[[?label]]...[[/]]`, where `label` becomes the name of the condition,
@@ -707,8 +707,8 @@ mod test {
 
 	#[test]
 	fn shells_in_templates() {
-		let mut template1 = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
 		let template2 = monitored_from_str("really [[:something]]");
+		let mut template1 = monitored_from_str("Hello, [[:name]]! This is a [[:something]] template.");
 		let mut shell = template2.wrap();
 		template1.insert("name".to_owned(), PETER);
 		shell.insert("something".to_owned(), NICE);
