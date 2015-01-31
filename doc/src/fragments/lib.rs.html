@@ -762,7 +762,7 @@
 <span id="720">720</span>
 </pre><pre class='rust '>
 <span class='attribute'>#<span class='op'>!</span>[<span class='ident'>doc</span>(<span class='ident'>html_root_url</span> <span class='op'>=</span> <span class='string'>&quot;http://ogeon.github.io/fragments/doc/&quot;</span>)]</span>
-<span class='attribute'>#<span class='op'>!</span>[<span class='ident'>allow</span>(<span class='ident'>unstable</span>)]</span>
+<span class='attribute'>#<span class='op'>!</span>[<span class='ident'>feature</span>(<span class='ident'>core</span>, <span class='ident'>std_misc</span>, <span class='ident'>io</span>)]</span>
 
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>fmt</span>;
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>str</span>::<span class='ident'>FromStr</span>;
@@ -781,7 +781,7 @@
 <span class='kw'>mod</span> <span class='ident'>parser</span>;
 
 <span class='doccomment'>///Internal representation of template parts.</span>
-<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>PartialEq</span>, <span class='ident'>Show</span>)]</span>
+<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>PartialEq</span>, <span class='ident'>Debug</span>)]</span>
 <span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>Token</span> {
 	<span class='ident'>String</span>(<span class='ident'>String</span>),
 	<span class='ident'>Placeholder</span>(<span class='ident'>String</span>),
@@ -941,7 +941,7 @@
 <span class='doccomment'>///</span>
 <span class='doccomment'>///Placeholders are written as `[[:label]]`, where `label` becomes the name of the placeholder.</span>
 <span class='doccomment'>///The label is then used to insert content: `my_template.insert(&quot;label&quot;, my_content);`.</span>
-<span class='doccomment'>///The assigned content for a placeholder can be anything that implements `Show`.</span>
+<span class='doccomment'>///The assigned content for a placeholder can be anything that implements `Display`.</span>
 <span class='doccomment'>///Even other templates may be inserted, which allows a more atomic structure.</span>
 <span class='doccomment'>///</span>
 <span class='doccomment'>///Conditional segments are surrounded by `[[?label]]...[[/]]`, where `label` becomes the name of the condition,</span>
@@ -1470,8 +1470,8 @@
 
 	<span class='attribute'>#[<span class='ident'>test</span>]</span>
 	<span class='kw'>fn</span> <span class='ident'>shells_in_templates</span>() {
-		<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>template1</span> <span class='op'>=</span> <span class='ident'>monitored_from_str</span>(<span class='string'>&quot;Hello, [[:name]]! This is a [[:something]] template.&quot;</span>);
 		<span class='kw'>let</span> <span class='ident'>template2</span> <span class='op'>=</span> <span class='ident'>monitored_from_str</span>(<span class='string'>&quot;really [[:something]]&quot;</span>);
+		<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>template1</span> <span class='op'>=</span> <span class='ident'>monitored_from_str</span>(<span class='string'>&quot;Hello, [[:name]]! This is a [[:something]] template.&quot;</span>);
 		<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>shell</span> <span class='op'>=</span> <span class='ident'>template2</span>.<span class='ident'>wrap</span>();
 		<span class='ident'>template1</span>.<span class='ident'>insert</span>(<span class='string'>&quot;name&quot;</span>.<span class='ident'>to_owned</span>(), <span class='ident'>PETER</span>);
 		<span class='ident'>shell</span>.<span class='ident'>insert</span>(<span class='string'>&quot;something&quot;</span>.<span class='ident'>to_owned</span>(), <span class='ident'>NICE</span>);
