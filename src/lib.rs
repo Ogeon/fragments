@@ -209,8 +209,8 @@ pub struct Template<'c> {
 impl<'c> Template<'c> {
 	///Create a new `Template` from a character iterator.
 	#[inline]
-	pub fn from_chars(b: &mut std::str::Chars) -> Result<Template<'c>, String> {
-		let tokens = try!(parser::parse(&mut b.map(|r| Ok::<char, String>(r))));
+	pub fn from_chars(b: std::str::Chars) -> Result<Template<'c>, String> {
+		let tokens = try!(parser::parse(b.map(|r| Ok::<char, String>(r))));
 
 		Ok(Template {
 			content: HashMap::new(),
@@ -223,7 +223,7 @@ impl<'c> Template<'c> {
 	///Create a new `Template` from a buffer.
 	#[inline]
 	pub fn from_buffer<T: Buffer>(b: &mut T) -> Result<Template<'c>, String> {
-		let tokens = try!(parser::parse(&mut b.chars().map(|r| match r {
+		let tokens = try!(parser::parse(b.chars().map(|r| match r {
 			Ok(c) => Ok(c),
 			Err(e) => Err(format!("io error: {}", e))
 		})));
@@ -298,12 +298,11 @@ impl<'c> InnerTemplate<'c> for Template<'c> {
 }
 
 impl<'c> FromStr for Template<'c> {
+	type Err = String;
+	
 	///Creates a new `Template` from a string.
-	fn from_str(s: &str) -> Option<Template<'c>> {
-		match Template::from_chars(&mut s.chars()) {
-			Ok(template) => Some(template),
-			Err(_) => None
-		}
+	fn from_str(s: &str) -> Result<Template<'c>, String> {
+		Template::from_chars(s.chars())
 	}
 }
 
@@ -523,7 +522,7 @@ mod test {
 	static NICE: &'static str = "nice";
 
 	fn monitored_from_str(s: &str) -> Template {
-		match Template::from_chars(&mut s.chars()) {
+		match Template::from_chars(s.chars()) {
 			Ok(template) => template,
 			Err(e) => panic!(e)
 		}

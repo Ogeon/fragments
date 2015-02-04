@@ -108,15 +108,15 @@ impl<T: Iterator<Item=V>, V> Iterator for Parser<T, V> {
 	}
 }
 
-pub fn parse<T: Iterator<Item=Result<char, String>>>(chars: &mut T) -> Result<Vec<Token>, String> {
+pub fn parse<T: Iterator<Item=Result<char, String>>>(chars: T) -> Result<Vec<Token>, String> {
 	let tokens = try!(lex(chars));
 	parse_block(&mut Parser{
 		tokens: tokens.into_iter().by_ref().peekable()
 	})
 }
 
-fn lex<T: Iterator<Item=Result<char, String>>>(chars: &mut T) -> Result<Vec<LexToken>, String> {
-	let mut chars = chars.by_ref().peekable();
+fn lex<T: Iterator<Item=Result<char, String>>>(chars: T) -> Result<Vec<LexToken>, String> {
+	let mut chars = chars.peekable();
 	let mut tokens = Vec::new();
 
 	loop {
