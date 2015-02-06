@@ -3,7 +3,7 @@ extern crate fragments;
 use fragments::Template;
 use std::borrow::ToOwned;
 use std::old_io::{BufferedReader, File};
-use std::path::Path;
+use std::old_path::Path;
 
 fn main() {
 	//Load the content of a file into a Template
