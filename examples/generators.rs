@@ -1,4 +1,3 @@
-#![feature(core)]
 extern crate fragments;
 use fragments::Template;
 use std::borrow::ToOwned;
@@ -17,7 +16,7 @@ fn main() {
     //This generator will just concatenate the arguments.
     //I expect you to make cooler generators, yourself ;)
 	template.insert_generator("join".to_owned(),
-        |&: parts: &[String], f: &mut fmt::Formatter| {
+        |parts: &[String], f: &mut fmt::Formatter| {
             fmt::Display::fmt(&parts.concat(), f)
         }
     );

@@ -1,5 +1,5 @@
 #![doc(html_root_url = "http://ogeon.github.io/fragments/doc/")]
-#![feature(core, std_misc, io)]
+#![feature(core, std_misc, old_io)]
 
 use std::fmt;
 use std::str::FromStr;
@@ -250,7 +250,7 @@ impl<'c> Template<'c> {
 
 	///Insert a content generator.
 	#[inline]
-	pub fn insert_generator<T: Generator + Send>(&mut self, label: String, gen: T) {
+	pub fn insert_generator<T: Generator + Send + 'c>(&mut self, label: String, gen: T) {
 		self.generators.insert(label, Box::new(gen) as Box<Generator>);
 	}
 
@@ -361,7 +361,7 @@ impl<'r, 'c> Shell<'r, 'c> {
 
 	///Insert a content generator.
 	#[inline]
-	pub fn insert_generator<T: Generator + Send>(&mut self, label: String, gen: T) {
+	pub fn insert_generator<T: Generator + Send + 'c>(&mut self, label: String, gen: T) {
 		self.generators.insert(label, Some(Box::new(gen) as Box<Generator>));
 	}
 
@@ -613,7 +613,7 @@ mod test {
 		template.insert_generator("say hello".to_owned(), echo);
 		assert_eq!(template.to_string(), "hello:Peter:how are:you?".to_owned());
 
-		template.insert_generator("say hello".to_owned(), |&: parts: &[String], f: &mut fmt::Formatter| fmt::Display::fmt(&parts.connect(":"), f));
+		template.insert_generator("say hello".to_owned(), |parts: &[String], f: &mut fmt::Formatter| fmt::Display::fmt(&parts.connect(":"), f));
 		assert_eq!(template.to_string(), "hello:Peter:how are:you?".to_owned());
 	}
 

@@ -1,4 +1,4 @@
-#![feature(path, core, io)]
+#![feature(old_path, old_io)]
 extern crate fragments;
 use fragments::Template;
 use std::borrow::ToOwned;
