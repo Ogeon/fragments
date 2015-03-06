@@ -9,7 +9,7 @@
 
     <title>lib.rs.html -- source</title>
 
-    <link rel="stylesheet" type="text/css" href="../../main.css">
+    <link rel="stylesheet" type="text/css" href="../../../main.css">
 
     
     
@@ -759,12 +759,14 @@
 <span id="717">717</span>
 <span id="718">718</span>
 <span id="719">719</span>
+<span id="720">720</span>
 </pre><pre class='rust '>
 <span class='attribute'>#<span class='op'>!</span>[<span class='ident'>doc</span>(<span class='ident'>html_root_url</span> <span class='op'>=</span> <span class='string'>&quot;http://ogeon.github.io/fragments/doc/&quot;</span>)]</span>
 <span class='attribute'>#<span class='op'>!</span>[<span class='ident'>feature</span>(<span class='ident'>core</span>, <span class='ident'>std_misc</span>, <span class='ident'>io</span>)]</span>
 
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>fmt</span>;
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>str</span>::<span class='ident'>FromStr</span>;
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>io</span>::{<span class='ident'>BufRead</span>, <span class='ident'>ReadExt</span>};
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>vec</span>::<span class='ident'>Vec</span>;
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>collections</span>::{<span class='ident'>HashMap</span>, <span class='ident'>HashSet</span>};
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>num</span>::<span class='ident'>strconv</span>::{
@@ -984,7 +986,7 @@
 
 	<span class='doccomment'>///Create a new `Template` from a buffer.</span>
 	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
-	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>from_buffer</span><span class='op'>&lt;</span><span class='ident'>T</span>: <span class='ident'>Buffer</span><span class='op'>&gt;</span>(<span class='ident'>b</span>: <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>T</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>Template</span><span class='op'>&lt;</span><span class='lifetime'>&#39;c</span><span class='op'>&gt;</span>, <span class='ident'>String</span><span class='op'>&gt;</span> {
+	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>from_buffer</span><span class='op'>&lt;</span><span class='ident'>T</span>: <span class='ident'>BufRead</span><span class='op'>&gt;</span>(<span class='ident'>b</span>: <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>T</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>Template</span><span class='op'>&lt;</span><span class='lifetime'>&#39;c</span><span class='op'>&gt;</span>, <span class='ident'>String</span><span class='op'>&gt;</span> {
 		<span class='kw'>let</span> <span class='ident'>tokens</span> <span class='op'>=</span> <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>parser</span>::<span class='ident'>parse</span>(<span class='ident'>b</span>.<span class='ident'>chars</span>().<span class='ident'>map</span>(<span class='op'>|</span><span class='ident'>r</span><span class='op'>|</span> <span class='kw'>match</span> <span class='ident'>r</span> {
 			<span class='prelude-val'>Ok</span>(<span class='ident'>c</span>) <span class='op'>=&gt;</span> <span class='prelude-val'>Ok</span>(<span class='ident'>c</span>),
 			<span class='prelude-val'>Err</span>(<span class='ident'>e</span>) <span class='op'>=&gt;</span> <span class='prelude-val'>Err</span>(<span class='macro'>format</span><span class='macro'>!</span>(<span class='string'>&quot;io error: {}&quot;</span>, <span class='ident'>e</span>))
@@ -1012,7 +1014,7 @@
 
 	<span class='doccomment'>///Insert a content generator.</span>
 	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
-	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>insert_generator</span><span class='op'>&lt;</span><span class='ident'>T</span>: <span class='ident'>Generator</span> <span class='op'>+</span> <span class='ident'>Send</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>label</span>: <span class='ident'>String</span>, <span class='ident'>gen</span>: <span class='ident'>T</span>) {
+	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>insert_generator</span><span class='op'>&lt;</span><span class='ident'>T</span>: <span class='ident'>Generator</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='lifetime'>&#39;c</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>label</span>: <span class='ident'>String</span>, <span class='ident'>gen</span>: <span class='ident'>T</span>) {
 		<span class='self'>self</span>.<span class='ident'>generators</span>.<span class='ident'>insert</span>(<span class='ident'>label</span>, <span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='ident'>gen</span>) <span class='kw'>as</span> <span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Generator</span><span class='op'>&gt;</span>);
 	}
 
@@ -1123,7 +1125,7 @@
 
 	<span class='doccomment'>///Insert a content generator.</span>
 	<span class='attribute'>#[<span class='ident'>inline</span>]</span>
-	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>insert_generator</span><span class='op'>&lt;</span><span class='ident'>T</span>: <span class='ident'>Generator</span> <span class='op'>+</span> <span class='ident'>Send</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>label</span>: <span class='ident'>String</span>, <span class='ident'>gen</span>: <span class='ident'>T</span>) {
+	<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>insert_generator</span><span class='op'>&lt;</span><span class='ident'>T</span>: <span class='ident'>Generator</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='lifetime'>&#39;c</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>label</span>: <span class='ident'>String</span>, <span class='ident'>gen</span>: <span class='ident'>T</span>) {
 		<span class='self'>self</span>.<span class='ident'>generators</span>.<span class='ident'>insert</span>(<span class='ident'>label</span>, <span class='prelude-val'>Some</span>(<span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='ident'>gen</span>) <span class='kw'>as</span> <span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Generator</span><span class='op'>&gt;</span>));
 	}
 
@@ -1375,7 +1377,7 @@
 		<span class='ident'>template</span>.<span class='ident'>insert_generator</span>(<span class='string'>&quot;say hello&quot;</span>.<span class='ident'>to_owned</span>(), <span class='ident'>echo</span>);
 		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>to_string</span>(), <span class='string'>&quot;hello:Peter:how are:you?&quot;</span>.<span class='ident'>to_owned</span>());
 
-		<span class='ident'>template</span>.<span class='ident'>insert_generator</span>(<span class='string'>&quot;say hello&quot;</span>.<span class='ident'>to_owned</span>(), <span class='op'>|</span><span class='kw-2'>&amp;</span>: <span class='ident'>parts</span>: <span class='kw-2'>&amp;</span>[<span class='ident'>String</span>], <span class='ident'>f</span>: <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>fmt</span>::<span class='ident'>Formatter</span><span class='op'>|</span> <span class='ident'>fmt</span>::<span class='ident'>Display</span>::<span class='ident'>fmt</span>(<span class='kw-2'>&amp;</span><span class='ident'>parts</span>.<span class='ident'>connect</span>(<span class='string'>&quot;:&quot;</span>), <span class='ident'>f</span>));
+		<span class='ident'>template</span>.<span class='ident'>insert_generator</span>(<span class='string'>&quot;say hello&quot;</span>.<span class='ident'>to_owned</span>(), <span class='op'>|</span><span class='ident'>parts</span>: <span class='kw-2'>&amp;</span>[<span class='ident'>String</span>], <span class='ident'>f</span>: <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>fmt</span>::<span class='ident'>Formatter</span><span class='op'>|</span> <span class='ident'>fmt</span>::<span class='ident'>Display</span>::<span class='ident'>fmt</span>(<span class='kw-2'>&amp;</span><span class='ident'>parts</span>.<span class='ident'>connect</span>(<span class='string'>&quot;:&quot;</span>), <span class='ident'>f</span>));
 		<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>template</span>.<span class='ident'>to_string</span>(), <span class='string'>&quot;hello:Peter:how are:you?&quot;</span>.<span class='ident'>to_owned</span>());
 	}
 
@@ -1519,13 +1521,13 @@
     
 
     <script>
-        window.rootPath = "../../";
+        window.rootPath = "../../../";
         window.currentCrate = "fragments";
         window.playgroundUrl = "";
     </script>
-    <script src="../../jquery.js"></script>
-    <script src="../../main.js"></script>
+    <script src="../../../jquery.js"></script>
+    <script src="../../../main.js"></script>
     
-    <script async src="../../search-index.js"></script>
+    <script async src="../../../search-index.js"></script>
 </body>
 </html>
