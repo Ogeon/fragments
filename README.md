@@ -37,18 +37,19 @@ must contain a `:` at the beginning of a label. Multiple placeholders with the s
 will be filled with the same content.
 
 ```rust
-#![allow(unstable)]
+#![feature(path, io, fs)]
 extern crate fragments;
 use fragments::Template;
 use std::borrow::ToOwned;
-use std::io::{BufferedReader, File};
+use std::io::BufReader;
+use std::fs::File;
 use std::path::Path;
 
 fn main() {
 	//Load the content of a file into a Template
 	//The file contains the text 'Hello, [[:name]]!', in this example
-	let file = File::open(&Path::new("path/to/my/template.txt"));
-	let mut template = match Template::from_buffer(&mut BufferedReader::new(file)) {
+	let file = File::open(&Path::new("path/to/my/template.txt")).unwrap();
+	let mut template = match Template::from_buffer(&mut BufReader::new(file)) {
 		Ok(template) => template,
 		Err(e) => panic!(e)
 	};
@@ -63,7 +64,6 @@ fn main() {
 ```
 
 ```rust
-#![allow(unstable)]
 extern crate fragments;
 use fragments::Template;
 use std::borrow::ToOwned;
@@ -84,7 +84,6 @@ fn main() {
 ##Escape Sequences
 Any character with a `\` in front of it will be treated as any other character by the parser:
 ```rust
-#![allow(unstable)]
 extern crate fragments;
 use fragments::Template;
 use std::borrow::ToOwned;
@@ -112,7 +111,6 @@ of the conditional part. The end token may contain anything after the `/`,
 which allows them to be labeled, like this: `[[?something]]...[[/something]]`.
 
 ```rust
-#![allow(unstable)]
 extern crate fragments;
 use fragments::Template;
 use std::borrow::ToOwned;
@@ -145,7 +143,6 @@ separated by one or more whitespaces. They can also be quoted to prevent special
 result will be inserted into the content.
 
 ```rust
-#![allow(unstable)]
 extern crate fragments;
 use fragments::Template;
 use std::borrow::ToOwned;
