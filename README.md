@@ -19,17 +19,6 @@ Add the following lines to your `Cargo.toml` file:
 git = "https://github.com/Ogeon/fragments"
 ```
 
-##Using `make`
-Simply clone the repository an build it like this:
-
-```shell
-git clone https://github.com/Ogeon/fragments.git
-cd fragments
-make
-```
-
-The library files will be placed in a new directory called `lib/`. You can also run `make docs` to generate documentation.
-
 #Examples
 The `Template` can both be created from strings and buffers (from a file, for example).
 Placeholder tokens (`[[:something]]`) are used to reserve space for dynamic content and
