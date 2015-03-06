@@ -1,8 +1,9 @@
 #![doc(html_root_url = "http://ogeon.github.io/fragments/doc/")]
-#![feature(core, std_misc, old_io)]
+#![feature(core, std_misc, io)]
 
 use std::fmt;
 use std::str::FromStr;
+use std::io::{BufRead, ReadExt};
 use std::vec::Vec;
 use std::collections::{HashMap, HashSet};
 use std::num::strconv::{
@@ -222,7 +223,7 @@ impl<'c> Template<'c> {
 
 	///Create a new `Template` from a buffer.
 	#[inline]
-	pub fn from_buffer<T: Buffer>(b: &mut T) -> Result<Template<'c>, String> {
+	pub fn from_buffer<T: BufRead>(b: &mut T) -> Result<Template<'c>, String> {
 		let tokens = try!(parser::parse(b.chars().map(|r| match r {
 			Ok(c) => Ok(c),
 			Err(e) => Err(format!("io error: {}", e))
