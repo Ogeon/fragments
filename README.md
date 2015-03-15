@@ -24,7 +24,6 @@ must contain a `:` at the beginning of a label. Multiple placeholders with the s
 will be filled with the same content.
 
 ```rust
-#![feature(path, io, fs)]
 extern crate fragments;
 use fragments::Template;
 use std::borrow::ToOwned;

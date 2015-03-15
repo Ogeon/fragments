@@ -1,4 +1,3 @@
-#![feature(path, io, fs)]
 extern crate fragments;
 use fragments::Template;
 use std::borrow::ToOwned;

@@ -3,7 +3,7 @@
 
 use std::fmt;
 use std::str::FromStr;
-use std::io::{BufRead, ReadExt};
+use std::io::BufRead;
 use std::vec::Vec;
 use std::collections::{HashMap, HashSet};
 use std::num::strconv::{
@@ -223,7 +223,7 @@ impl<'c> Template<'c> {
 
 	///Create a new `Template` from a buffer.
 	#[inline]
-	pub fn from_buffer<T: BufRead>(b: &mut T) -> Result<Template<'c>, String> {
+	pub fn from_buffer<T: BufRead>(b: T) -> Result<Template<'c>, String> {
 		let tokens = try!(parser::parse(b.chars().map(|r| match r {
 			Ok(c) => Ok(c),
 			Err(e) => Err(format!("io error: {}", e))
@@ -548,7 +548,7 @@ mod test {
 	}
 
 	#[test]
-	#[should_fail]
+	#[should_panic]
 	fn strange_tokens() {
 		let _: Template = "Hello, [[[:name]]]! This is a [[[[:something]] template.".parse().unwrap();
 	}
