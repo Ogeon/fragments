@@ -40,7 +40,7 @@ pub enum ContentType<'c> {
 	StringSlice(&'c str),
 	Template(Template<'c>),
 	Shell(Shell<'c, 'c>),
-	Fmt(Box<fmt::Display + 'c>)
+	Fmt(Box<fmt::Display + Send + Sync + 'c>)
 }
 
 macro_rules! call_fmt {
@@ -162,7 +162,7 @@ impl<'r, 'c: 'r> TemplateContent<'r> for Shell<'r, 'c> {
 }
 
 
-impl<'c> TemplateContent<'c> for Box<fmt::Display + 'c> {
+impl<'c> TemplateContent<'c> for Box<fmt::Display + Send + Sync + 'c> {
 	fn into_template_content(self) -> ContentType<'c> {
 		ContentType::Fmt(self)
 	}
@@ -251,7 +251,7 @@ impl<'c> Template<'c> {
 
 	///Insert a content generator.
 	#[inline]
-	pub fn insert_generator<T: Generator + Send + 'c>(&mut self, label: String, gen: T) {
+	pub fn insert_generator<T: Generator + 'c>(&mut self, label: String, gen: T) {
 		self.generators.insert(label, Box::new(gen) as Box<Generator>);
 	}
 
@@ -429,7 +429,7 @@ impl<'r, 'c> fmt::Display for Shell<'r, 'c> {
 
 
 ///A trait for overridable templates.
-pub trait InnerTemplate<'c> {
+pub trait InnerTemplate<'c>: Send + Sync {
 	fn get_content<'a>(&'a self, label: &str) -> Option<&'a ContentType<'c>>;
 	fn get_condition(&self, label: &str) -> bool;
 	fn is_content_defined(&self, label: &str) -> bool;
@@ -439,11 +439,11 @@ pub trait InnerTemplate<'c> {
 
 
 ///A trait for content generators.
-pub trait Generator {
+pub trait Generator: Send + Sync {
 	fn generate(&self, args: &[String], formatter:  &mut fmt::Formatter) -> fmt::Result;
 }
 
-impl<F: Fn(&[String], & mut fmt::Formatter) -> fmt::Result> Generator for F {
+impl<F: Send + Sync + Fn(&[String], & mut fmt::Formatter) -> fmt::Result> Generator for F {
 	fn generate(&self, args: &[String], formatter:  &mut fmt::Formatter) -> fmt::Result {
 		(*self)(args, formatter)
 	}
