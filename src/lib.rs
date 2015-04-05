@@ -1,5 +1,5 @@
 #![doc(html_root_url = "http://ogeon.github.io/fragments/doc/")]
-#![feature(core, std_misc, io)]
+#![feature(std_misc, io)]
 
 use std::fmt;
 use std::str::FromStr;
@@ -294,7 +294,7 @@ impl<'c> InnerTemplate<'c> for Template<'c> {
 	}
 
 	fn render(&self, top_template: &InnerTemplate, f: &mut fmt::Formatter) -> fmt::Result {
-		format_tokens(top_template, self.tokens.as_slice(), f)
+		format_tokens(top_template, &self.tokens, f)
 	}
 }
 
@@ -309,7 +309,7 @@ impl<'c> FromStr for Template<'c> {
 
 impl<'c> fmt::Display for Template<'c> {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		format_tokens(self as &InnerTemplate, self.tokens.as_slice(), f)
+		format_tokens(self as &InnerTemplate, &self.tokens, f)
 	}
 }
 
@@ -455,34 +455,34 @@ impl<F: Send + Sync + Fn(&[String], & mut fmt::Formatter) -> fmt::Result> Genera
 fn format_tokens(template: &InnerTemplate, tokens: &[Token], f: &mut fmt::Formatter) -> fmt::Result {
 	for token in tokens.iter() {
 		let res = match token {
-			&Token::String(ref s) => f.write_str(s.as_slice()),
+			&Token::String(ref s) => f.write_str(s),
 
 			&Token::Placeholder(ref k) => {
-				match template.get_content(k.as_slice()) {
+				match template.get_content(k) {
 					Some(value) => fmt::Display::fmt(value, f),
 					None => Ok(())
 				}
 			},
 
 			&Token::Conditional(ref k, expected, ref tokens) => {
-				if template.get_condition(k.as_slice()) == expected {
-					format_tokens(template, tokens.as_slice(), f)
+				if template.get_condition(k) == expected {
+					format_tokens(template, &tokens, f)
 				} else {
 					Ok(())
 				}
 			},
 
 			&Token::ContentConditional(ref k, expected, ref tokens) => {
-				if template.is_content_defined(k.as_slice()) == expected {
-					format_tokens(template, tokens.as_slice(), f)
+				if template.is_content_defined(k) == expected {
+					format_tokens(template, &tokens, f)
 				} else {
 					Ok(())
 				}
 			},
 
 			&Token::Generated(ref k, ref vars) => {
-				match template.get_generator(k.as_slice()) {
-					Some(gen) => gen.generate(vars.as_slice(), f),
+				match template.get_generator(k) {
+					Some(gen) => gen.generate(&vars, f),
 					None => Ok(())
 				}
 			}
